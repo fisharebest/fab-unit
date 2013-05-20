@@ -1,0 +1,13 @@
+DROP PROCEDURE IF EXISTS run //
+
+CREATE PROCEDURE run (
+	IN p_database VARCHAR(255)
+)
+	COMMENT 'Run the tests for a given database'
+	LANGUAGE SQL
+	DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	SELECT p_database;
+END //
