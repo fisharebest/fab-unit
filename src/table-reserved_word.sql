@@ -22,7 +22,6 @@ CREATE TABLE reserved_word (
 	PRIMARY KEY (reserved_word)
 ) //
 
-
 -- See https://dev.mysql.com/doc/refman/5.7/en/reserved-words.html
 INSERT INTO reserved_word (reserved_word) VALUES
 ('ACCESSIBLE'),

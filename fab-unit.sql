@@ -1,29 +1,254 @@
-DELIMITER //
-DROP PROCEDURE IF EXISTS reserved_words //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CREATE PROCEDURE reserved_words (
-	IN p_database VARCHAR(255)
-)
+DELIMITER //
+
+SET SESSION
+	autocommit               := FALSE,
+	character_set_client     := utf8mb4,
+	character_set_results    := utf8mb4,
+	character_set_connection := utf8mb4,
+	collation_connection     := utf8mb4_general_ci,
+	foreign_key_checks       := TRUE,
+	innodb_strict_mode       := ON,
+	sql_mode                 := 'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO',
+	sql_notes                := TRUE,
+	sql_warnings             := TRUE,
+	unique_checks            := TRUE //
+
+CREATE DATABASE IF NOT EXISTS fab_unit COLLATE utf8mb4_general_ci //
+
+USE fab_unit //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS assert_no_reserved_words //
+
+CREATE PROCEDURE assert_no_reserved_words ()
 	COMMENT 'Check if any schema objects are named after reserved words'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	SELECT p_database;
+	DECLARE l_message TEXT;
+
+	DECLARE c_reserved_word CURSOR FOR
+	SELECT CONCAT('Schema `', schema_name, '` is a reserved word')
+		FROM information_schema.schemata
+		JOIN fab_unit.reserved_word ON (schema_name = reserved_word)
+		WHERE schema_name = @_fab_schema_name
+	UNION
+	SELECT CONCAT('Table `', table_schema, '`.`', table_name, '` is a reserved word')
+		FROM information_schema.tables
+		JOIN fab_unit.reserved_word ON (table_name = reserved_word)
+		WHERE table_schema = @_fab_schema_name
+	UNION
+	SELECT CONCAT('Column `', table_schema, '`.`', table_name, '`.`', column_name, '` is a reserved word')
+		FROM information_schema.columns
+		JOIN fab_unit.reserved_word ON (column_name = reserved_word)
+		WHERE table_schema = @_fab_schema_name;
+
+	OPEN c_reserved_word;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_reserved_word;
+		LOOP
+			FETCH c_reserved_word INTO l_message;
+			CALL fab_unit.fail(l_message);
+		END LOOP;
+	END;
 END //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS assert //
+
+CREATE PROCEDURE assert (
+	IN p_title  TEXT,
+	IN p_result BOOLEAN
+)
+	COMMENT 'Log the result of an assertion'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	SET @_fab_sql := p_sql;
+	PREPARE statement FROM @_fab_sql;
+	SET @sql := NULL;
+	EXECUTE statement;
+	DEALLOCATE PREPARE statement;
+END //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS execute_immediate //
+
+CREATE PROCEDURE execute_immediate (
+	IN p_sql TEXT
+)
+	COMMENT 'Execute dynamic SQL'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	SET @_fab_sql := p_sql;
+	PREPARE statement FROM @_fab_sql;
+	SET @sql := NULL;
+	EXECUTE statement;
+	DEALLOCATE PREPARE statement;
+END //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS fail //
+
+CREATE PROCEDURE fail (
+	IN p_message  TEXT
+)
+	COMMENT 'Log the result of a failed assertion'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	SELECT p_message AS fail;
+END //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS pass //
+
+CREATE PROCEDURE pass (
+	IN p_message  TEXT
+)
+	COMMENT 'Log the result of a successful assertion'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	SELECT p_message AS success;
+END //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 DROP PROCEDURE IF EXISTS run //
 
 CREATE PROCEDURE run (
-	IN p_database VARCHAR(255)
+	p_schema_name TEXT
 )
-	COMMENT 'Run the tests for a given database'
+	COMMENT 'Run the unit tests for current database'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	SELECT p_database;
+	-- The function DATABASE() is evaulated when the procedure is
+	-- compiled, meaning that it refers to the fab_unit schema,
+	-- not the one we are testing.  Hence capture it early.
+	SET @_fab_schema_name := p_schema_name;
+
+	CALL fab_unit.reserved_words(@_fab_schema_name);
 END //
 -- fab-unit - A unit test framework for MySQL applications
 --
@@ -48,7 +273,6 @@ CREATE TABLE reserved_word (
 	reserved_word VARCHAR(31) COLLATE utf8mb4_general_ci NOT NULL,
 	PRIMARY KEY (reserved_word)
 ) //
-
 
 -- See https://dev.mysql.com/doc/refman/5.7/en/reserved-words.html
 INSERT INTO reserved_word (reserved_word) VALUES
@@ -294,33 +518,3 @@ INSERT INTO reserved_word (reserved_word) VALUES
 ('ZEROFILL') //
 
 COMMIT //
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-CREATE OR REPLACE VIEW reserved_word_view AS
-SELECT schema_name, 'Schema' AS object_type, schema_name AS object_name
-FROM information_schema.schemata
-JOIN fab_unit.reserved_word ON (schema_name = reserved_word)
-UNION
-SELECT table_schema, 'Table', CONCAT(table_schema, '.', table_name)
-FROM information_schema.tables
-JOIN fab_unit.reserved_word ON (table_name = reserved_word)
-UNION
-SELECT table_schema, 'Column', CONCAT(table_schema, '.', table_name, '.', column_name)
-FROM information_schema.columns
-JOIN fab_unit.reserved_word ON (column_name = reserved_word)
-//

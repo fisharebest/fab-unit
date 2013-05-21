@@ -15,10 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-default: clean fab-unit.sql
+fab-unit.sql: src/connection.sql src/procedure-*.sql src/table-*.sql
+	cat $^ > $@
 
 clean:
-	rm fab-unit.sql
+	rm -f fab-unit.sql
 
-fab-unit.sql: src/connection.sql src/procedure-*.sql src/table-*.sql src/view-*.sql
-	cat $^ > $@
+self-test: clean fab-unit.sql
+	mysql                     --execute "SOURCE fab-unit.sql"
+	mysql --database fab_unit --execute "CALL fab_unit.run(DATABASE())"

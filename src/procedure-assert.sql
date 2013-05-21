@@ -15,21 +15,21 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DELIMITER //
+DROP PROCEDURE IF EXISTS assert //
 
-SET SESSION
-	autocommit               := FALSE,
-	character_set_client     := utf8mb4,
-	character_set_results    := utf8mb4,
-	character_set_connection := utf8mb4,
-	collation_connection     := utf8mb4_general_ci,
-	foreign_key_checks       := TRUE,
-	innodb_strict_mode       := ON,
-	sql_mode                 := 'TRADITIONAL,NO_AUTO_VALUE_ON_ZERO',
-	sql_notes                := TRUE,
-	sql_warnings             := TRUE,
-	unique_checks            := TRUE //
-
-CREATE DATABASE IF NOT EXISTS fab_unit COLLATE utf8mb4_general_ci //
-
-USE fab_unit //
+CREATE PROCEDURE assert (
+	IN p_title  TEXT,
+	IN p_result BOOLEAN
+)
+	COMMENT 'Log the result of an assertion'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	SET @_fab_sql := p_sql;
+	PREPARE statement FROM @_fab_sql;
+	SET @sql := NULL;
+	EXECUTE statement;
+	DEALLOCATE PREPARE statement;
+END //
