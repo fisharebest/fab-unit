@@ -15,17 +15,20 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS fail //
+DROP PROCEDURE IF EXISTS assert_not_like //
 
-CREATE PROCEDURE fail (
-	IN p_message  TEXT
+CREATE PROCEDURE assert_not_like (
+	IN p_expression1 BLOB,
+	IN p_expression2 BLOB,
+	IN p_message     TEXT
 )
-	COMMENT 'Log the result of a failed assertion'
+	COMMENT 'Assert that one expression is not like another'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
-	SELECT p_message AS fail;
+	SET p_message := COALESCE(p_message, 'assert_not_like()');
+	CALL assert(p_expression1 NOT LIKE p_expression2, p_message);
 END //
 

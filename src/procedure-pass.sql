@@ -28,3 +28,4 @@ CREATE PROCEDURE pass (
 BEGIN
 	SELECT p_message AS success;
 END //
+

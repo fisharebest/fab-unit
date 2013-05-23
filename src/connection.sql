@@ -18,7 +18,7 @@
 DELIMITER //
 
 SET SESSION
-	autocommit               := FALSE,
+	autocommit               := TRUE,
 	character_set_client     := utf8mb4,
 	character_set_results    := utf8mb4,
 	character_set_connection := utf8mb4,
@@ -33,3 +33,4 @@ SET SESSION
 CREATE DATABASE IF NOT EXISTS fab_unit COLLATE utf8mb4_general_ci //
 
 USE fab_unit //
+

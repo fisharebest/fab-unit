@@ -17,7 +17,7 @@
 
 DROP PROCEDURE IF EXISTS assert_no_reserved_words //
 
-CREATE PROCEDURE assert_no_reserved_words ()
+CREATE PROCEDURE assert_no_reserved_words()
 	COMMENT 'Check if any schema objects are named after reserved words'
 	LANGUAGE SQL
 	DETERMINISTIC
@@ -47,7 +47,8 @@ BEGIN
 		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_reserved_word;
 		LOOP
 			FETCH c_reserved_word INTO l_message;
-			CALL fab_unit.fail(l_message);
+			CALL fail(l_message);
 		END LOOP;
 	END;
 END //
+

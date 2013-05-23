@@ -265,4 +265,3 @@ INSERT INTO reserved_word (reserved_word) VALUES
 ('YEAR_MONTH'),
 ('ZEROFILL') //
 
-COMMIT //

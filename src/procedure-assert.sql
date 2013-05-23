@@ -18,8 +18,8 @@
 DROP PROCEDURE IF EXISTS assert //
 
 CREATE PROCEDURE assert (
-	IN p_title  TEXT,
-	IN p_result BOOLEAN
+	IN p_expression BOOLEAN
+	IN p_message    TEXT,
 )
 	COMMENT 'Log the result of an assertion'
 	LANGUAGE SQL
@@ -27,9 +27,10 @@ CREATE PROCEDURE assert (
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	SET @_fab_sql := p_sql;
-	PREPARE statement FROM @_fab_sql;
-	SET @sql := NULL;
-	EXECUTE statement;
-	DEALLOCATE PREPARE statement;
+	IF p_expression THEN
+		CALL pass(p_message);
+	ELSE
+		CALL fail(p_message);
+	END IF;
 END //
+
