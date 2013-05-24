@@ -15,22 +15,5 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert //
-
-CREATE PROCEDURE assert (
-	IN p_expression BOOLEAN,
-	IN p_message    TEXT
-)
-	COMMENT 'Log the result of an assertion'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
-	SQL SECURITY DEFINER
-BEGIN
-	IF p_expression THEN
-		CALL pass(p_message);
-	ELSE
-		CALL fail(p_message);
-	END IF;
-END //
+CALL fab_unit.run(database(), null) //
 

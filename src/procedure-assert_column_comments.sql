@@ -15,22 +15,17 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert //
+DROP PROCEDURE IF EXISTS assert_column_comments //
 
-CREATE PROCEDURE assert (
-	IN p_expression BOOLEAN,
-	IN p_message    TEXT
+CREATE PROCEDURE assert_column_comments(
+	p_schema TEXT,
+	p_table  TEXT
 )
-	COMMENT 'Log the result of an assertion'
+	COMMENT 'Check that all columns have comments'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	IF p_expression THEN
-		CALL pass(p_message);
-	ELSE
-		CALL fail(p_message);
-	END IF;
 END //
 

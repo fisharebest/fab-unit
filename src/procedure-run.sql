@@ -18,7 +18,8 @@
 DROP PROCEDURE IF EXISTS run //
 
 CREATE PROCEDURE run (
-	p_schema_name TEXT
+	p_schema TEXT,
+	p_prefix TEXT
 )
 	COMMENT 'Run the unit tests for current database'
 	LANGUAGE SQL
@@ -26,11 +27,30 @@ CREATE PROCEDURE run (
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	-- The function DATABASE() is evaulated when the procedure is
-	-- compiled, meaning that it refers to the fab_unit schema,
-	-- not the one we are testing.  Hence capture it early.
-	SET @_fab_schema_name := p_schema_name;
+	DECLARE l_routine_name    TEXT;
+	DECLARE l_routine_comment TEXT;
+	
+	DECLARE c_test_case CURSOR FOR
+	SELECT routine_name, routine_comment
+	FROM   information_schema.routines
+	WHERE  routine_schema = p_schema
+	AND    routine_type   = 'PROCEDURE'
+	AND    routine_name   LIKE CONCAT(COALESCE(p_prefix, 'test_'), '%')
+	AND    routine_name   NOT LIKE '%_set_up'
+	AND    routine_name   NOT LIKE '%_tear_down';
 
-	CALL fab_unit.reserved_words(@_fab_schema_name);
+	CALL fab_unit.assert_no_reserved_words(p_schema);
+	CALL fab_unit.assert_table_comments   (p_schema);
+	CALL fab_unit.assert_column_comments  (p_schema, NULL);
+
+	OPEN c_test_case;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_test_case;
+		LOOP
+			FETCH c_test_case INTO l_routine_name, l_routine_comment;
+			SELECT l_routine_name, l_routine_comment;
+		END LOOP;
+	END;
+
 END //
 

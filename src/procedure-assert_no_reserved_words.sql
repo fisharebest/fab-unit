@@ -17,7 +17,9 @@
 
 DROP PROCEDURE IF EXISTS assert_no_reserved_words //
 
-CREATE PROCEDURE assert_no_reserved_words()
+CREATE PROCEDURE assert_no_reserved_words(
+	p_schema TEXT
+)
 	COMMENT 'Check if any schema objects are named after reserved words'
 	LANGUAGE SQL
 	DETERMINISTIC
@@ -30,17 +32,17 @@ BEGIN
 	SELECT CONCAT('Schema `', schema_name, '` is a reserved word')
 		FROM information_schema.schemata
 		JOIN fab_unit.reserved_word ON (schema_name = reserved_word)
-		WHERE schema_name = @_fab_schema_name
+		WHERE schema_name = p_schema
 	UNION
 	SELECT CONCAT('Table `', table_schema, '`.`', table_name, '` is a reserved word')
 		FROM information_schema.tables
 		JOIN fab_unit.reserved_word ON (table_name = reserved_word)
-		WHERE table_schema = @_fab_schema_name
+		WHERE table_schema = p_schema
 	UNION
 	SELECT CONCAT('Column `', table_schema, '`.`', table_name, '`.`', column_name, '` is a reserved word')
 		FROM information_schema.columns
 		JOIN fab_unit.reserved_word ON (column_name = reserved_word)
-		WHERE table_schema = @_fab_schema_name;
+		WHERE table_schema = p_schema;
 
 	OPEN c_reserved_word;
 	BEGIN

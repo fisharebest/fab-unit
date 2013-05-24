@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-fab-unit.sql: src/connection.sql src/procedure-*.sql src/table-*.sql
+fab-unit.sql: src/connection.sql src/procedure-*.sql src/table-*.sql src/test.sql
 	cat $^ > $@
 
 clean:
