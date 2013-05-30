@@ -51,22 +51,18 @@ USE fab_unit //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS execute_immediate //
+DROP PROCEDURE IF EXISTS assert_column_comments //
 
-CREATE PROCEDURE execute_immediate (
-	IN p_sql TEXT
+CREATE PROCEDURE assert_column_comments(
+	p_schema TEXT,
+	p_table  TEXT
 )
-	COMMENT 'Execute dynamic SQL'
+	COMMENT 'Check that all columns have comments'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	SET @_fab_sql := p_sql;
-	PREPARE statement FROM @_fab_sql;
-	SET @sql := NULL;
-	EXECUTE statement;
-	DEALLOCATE PREPARE statement;
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -86,51 +82,21 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert_null //
+DROP PROCEDURE IF EXISTS assert_equals //
 
-CREATE PROCEDURE assert_null (
-	IN p_expression BOOLEAN,
-	IN p_message    TEXT
+CREATE PROCEDURE assert_equals (
+	IN p_expression1 BLOB,
+	IN p_expression2 BLOB,
+	IN p_message     TEXT
 )
-	COMMENT 'Assert that a value equates to NULL'
+	COMMENT 'Assert that two values are equal'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
-	SET p_message := COALESCE(p_message, 'assert_null()');
-	CALL assert(p_expression IS NULL, p_message);
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS fail //
-
-CREATE PROCEDURE fail (
-	IN p_message  TEXT
-)
-	COMMENT 'Log the result of a failed assertion'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
-	SQL SECURITY DEFINER
-BEGIN
-	SELECT p_message AS fail;
+	SET p_message := COALESCE(p_message, 'assert_equals()');
+	CALL assert(p_expression1 <=> p_expression2, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -183,21 +149,22 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert_not_like //
+DROP PROCEDURE IF EXISTS assert_like_escape //
 
-CREATE PROCEDURE assert_not_like (
+CREATE PROCEDURE assert_like_escape (
 	IN p_expression1 BLOB,
 	IN p_expression2 BLOB,
+	IN p_escape      CHAR(1),
 	IN p_message     TEXT
 )
-	COMMENT 'Assert that one expression is not like another'
+	COMMENT 'Assert that one expression is like another'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
-	SET p_message := COALESCE(p_message, 'assert_not_like()');
-	CALL assert(p_expression1 NOT LIKE p_expression2, p_message);
+	SET p_message := COALESCE(p_message, 'assert_like_escape()');
+	CALL assert(p_expression1 LIKE p_expression2 ESCAPE p_escape, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -307,196 +274,6 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS run //
-
-CREATE PROCEDURE run (
-	p_schema TEXT,
-	p_prefix TEXT
-)
-	COMMENT 'Run the unit tests for current database'
-	LANGUAGE SQL
-	DETERMINISTIC
-	MODIFIES SQL DATA
-	SQL SECURITY DEFINER
-BEGIN
-	DECLARE l_routine_name    TEXT;
-	DECLARE l_routine_comment TEXT;
-	
-	DECLARE c_test_case CURSOR FOR
-	SELECT routine_name, routine_comment
-	FROM   information_schema.routines
-	WHERE  routine_schema = p_schema
-	AND    routine_type   = 'PROCEDURE'
-	AND    routine_name   LIKE CONCAT(COALESCE(p_prefix, 'test_'), '%')
-	AND    routine_name   NOT LIKE '%_set_up'
-	AND    routine_name   NOT LIKE '%_tear_down';
-
-	CALL fab_unit.assert_no_reserved_words(p_schema);
-	CALL fab_unit.assert_table_comments   (p_schema);
-	CALL fab_unit.assert_column_comments  (p_schema, NULL);
-
-	OPEN c_test_case;
-	BEGIN
-		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_test_case;
-		LOOP
-			FETCH c_test_case INTO l_routine_name, l_routine_comment;
-			SELECT l_routine_name, l_routine_comment;
-		END LOOP;
-	END;
-
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert_regexp_binary //
-
-CREATE PROCEDURE assert_regexp_binary (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
-	IN p_message     TEXT
-)
-	COMMENT 'Assert that an expression matches a case-sensitive regular expression'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	CONTAINS SQL
-	SQL SECURITY DEFINER
-BEGIN
-	SET p_message := COALESCE(p_message, 'assert_regexp()');
-	CALL assert(p_expression1 NOT REGEXP BINARY p_expression2, p_message);
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert_table_comments //
-
-CREATE PROCEDURE assert_table_comments(
-	p_schema TEXT
-)
-	COMMENT 'Check that all tables have comments'
-	LANGUAGE SQL
-	DETERMINISTIC
-	MODIFIES SQL DATA
-	SQL SECURITY DEFINER
-BEGIN
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert_regexp //
-
-CREATE PROCEDURE assert_regexp (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
-	IN p_message     TEXT
-)
-	COMMENT 'Assert that an expression matches a case-insensitive regular expression'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	CONTAINS SQL
-	SQL SECURITY DEFINER
-BEGIN
-	SET p_message := COALESCE(p_message, 'assert_regexp()');
-	CALL assert(p_expression1 NOT REGEXP p_expression2, p_message);
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert //
-
-CREATE PROCEDURE assert (
-	IN p_expression BOOLEAN,
-	IN p_message    TEXT
-)
-	COMMENT 'Log the result of an assertion'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
-	SQL SECURITY DEFINER
-BEGIN
-	IF p_expression THEN
-		CALL pass(p_message);
-	ELSE
-		CALL fail(p_message);
-	END IF;
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
 DROP PROCEDURE IF EXISTS assert_not_equals //
 
 CREATE PROCEDURE assert_not_equals (
@@ -512,105 +289,6 @@ CREATE PROCEDURE assert_not_equals (
 BEGIN
 	SET p_message := COALESCE(p_message, 'assert_not_equals()');
 	CALL assert(NOT p_expression1 <=> p_expression2, p_message);
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert_not_regexp_binary //
-
-CREATE PROCEDURE assert_not_regexp_binary (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
-	IN p_message     TEXT
-)
-	COMMENT 'Assert that an expression does not match a case-sensitive regular expression'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	CONTAINS SQL
-	SQL SECURITY DEFINER
-BEGIN
-	SET p_message := COALESCE(p_message, 'assert_not_regexp_binary()');
-	CALL assert(p_expression1 NOT REGEXP BINARY p_expression2, p_message);
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert_column_comments //
-
-CREATE PROCEDURE assert_column_comments(
-	p_schema TEXT,
-	p_table  TEXT
-)
-	COMMENT 'Check that all columns have comments'
-	LANGUAGE SQL
-	DETERMINISTIC
-	MODIFIES SQL DATA
-	SQL SECURITY DEFINER
-BEGIN
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert_equals //
-
-CREATE PROCEDURE assert_equals (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
-	IN p_message     TEXT
-)
-	COMMENT 'Assert that two values are equal'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	CONTAINS SQL
-	SQL SECURITY DEFINER
-BEGIN
-	SET p_message := COALESCE(p_message, 'assert_equals()');
-	CALL assert(p_expression1 <=> p_expression2, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -665,18 +343,21 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS pass //
+DROP PROCEDURE IF EXISTS assert_not_like //
 
-CREATE PROCEDURE pass (
-	IN p_message  TEXT
+CREATE PROCEDURE assert_not_like (
+	IN p_expression1 BLOB,
+	IN p_expression2 BLOB,
+	IN p_message     TEXT
 )
-	COMMENT 'Log the result of a successful assertion'
+	COMMENT 'Assert that one expression is not like another'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
-	SELECT p_message AS success;
+	SET p_message := COALESCE(p_message, 'assert_not_like()');
+	CALL assert(p_expression1 NOT LIKE p_expression2, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -696,19 +377,19 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert_true //
+DROP PROCEDURE IF EXISTS assert_not_null //
 
-CREATE PROCEDURE assert_true (
+CREATE PROCEDURE assert_not_null (
 	IN p_expression BOOLEAN,
 	IN p_message    TEXT
 )
-	COMMENT 'Assert that a value equates to TRUE'
+	COMMENT 'Assert that a value does not equate to NULL'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
-	SET p_message := COALESCE(p_message, 'assert_true()');
+	SET p_message := COALESCE(p_message, 'assert_not_null()');
 	CALL assert(p_expression = TRUE, p_message);
 END //
 
@@ -729,22 +410,21 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert_like_escape //
+DROP PROCEDURE IF EXISTS assert_not_regexp_binary //
 
-CREATE PROCEDURE assert_like_escape (
+CREATE PROCEDURE assert_not_regexp_binary (
 	IN p_expression1 BLOB,
 	IN p_expression2 BLOB,
-	IN p_escape      CHAR(1),
 	IN p_message     TEXT
 )
-	COMMENT 'Assert that one expression is like another'
+	COMMENT 'Assert that an expression does not match a case-sensitive regular expression'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
-	SET p_message := COALESCE(p_message, 'assert_like_escape()');
-	CALL assert(p_expression1 LIKE p_expression2 ESCAPE p_escape, p_message);
+	SET p_message := COALESCE(p_message, 'assert_not_regexp_binary()');
+	CALL assert(p_expression1 NOT REGEXP BINARY p_expression2, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -798,20 +478,420 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert_not_null //
+DROP PROCEDURE IF EXISTS assert_null //
 
-CREATE PROCEDURE assert_not_null (
+CREATE PROCEDURE assert_null (
 	IN p_expression BOOLEAN,
 	IN p_message    TEXT
 )
-	COMMENT 'Assert that a value does not equate to NULL'
+	COMMENT 'Assert that a value equates to NULL'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
-	SET p_message := COALESCE(p_message, 'assert_not_null()');
+	SET p_message := COALESCE(p_message, 'assert_null()');
+	CALL assert(p_expression IS NULL, p_message);
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS assert_regexp_binary //
+
+CREATE PROCEDURE assert_regexp_binary (
+	IN p_expression1 BLOB,
+	IN p_expression2 BLOB,
+	IN p_message     TEXT
+)
+	COMMENT 'Assert that an expression matches a case-sensitive regular expression'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	CONTAINS SQL
+	SQL SECURITY DEFINER
+BEGIN
+	SET p_message := COALESCE(p_message, 'assert_regexp()');
+	CALL assert(p_expression1 NOT REGEXP BINARY p_expression2, p_message);
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS assert_regexp //
+
+CREATE PROCEDURE assert_regexp (
+	IN p_expression1 BLOB,
+	IN p_expression2 BLOB,
+	IN p_message     TEXT
+)
+	COMMENT 'Assert that an expression matches a case-insensitive regular expression'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	CONTAINS SQL
+	SQL SECURITY DEFINER
+BEGIN
+	SET p_message := COALESCE(p_message, 'assert_regexp()');
+	CALL assert(p_expression1 NOT REGEXP p_expression2, p_message);
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS assert_routine_comments //
+
+CREATE PROCEDURE assert_routine_comments(
+	p_schema TEXT
+)
+	COMMENT 'Check that all procedures and functions have comments'
+	LANGUAGE SQL
+	DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS assert //
+
+CREATE PROCEDURE assert (
+	IN p_expression BOOLEAN,
+	IN p_message    TEXT
+)
+	COMMENT 'Log the result of an assertion'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	IF @_fab_expect_to_fail THEN
+		SET p_expression := NOT p_expression;
+	END IF;
+	IF p_expression THEN
+		CALL pass(p_message);
+	ELSE
+		CALL fail(p_message);
+	END IF;
+	SET @_fab_expect_to_fail := FALSE;
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS assert_table_comments //
+
+CREATE PROCEDURE assert_table_comments(
+	p_schema TEXT
+)
+	COMMENT 'Check that all tables have comments'
+	LANGUAGE SQL
+	DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS assert_true //
+
+CREATE PROCEDURE assert_true (
+	IN p_expression BOOLEAN,
+	IN p_message    TEXT
+)
+	COMMENT 'Assert that a value equates to TRUE'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	CONTAINS SQL
+	SQL SECURITY DEFINER
+BEGIN
+	SET p_message := COALESCE(p_message, 'assert_true()');
 	CALL assert(p_expression = TRUE, p_message);
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS execute_immediate //
+
+CREATE PROCEDURE execute_immediate (
+	IN p_sql TEXT
+)
+	COMMENT 'Execute dynamic SQL'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	SET @_fab_sql := p_sql;
+	PREPARE statement FROM @_fab_sql;
+	SET @sql := NULL;
+	EXECUTE statement;
+	DEALLOCATE PREPARE statement;
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+-- Reverse the pass/fail status of the next assertion.
+-- This allows us to self-test both pass and fail conditions.
+
+DROP PROCEDURE IF EXISTS expect_to_fail //
+
+CREATE PROCEDURE expect_to_fail ()
+	COMMENT 'Expect the next test to fail, rather than pass'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	CONTAINS SQL
+	SQL SECURITY DEFINER
+BEGIN
+	SET @_fab_expect_to_fail := TRUE;
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS fail //
+
+CREATE PROCEDURE fail (
+	IN p_message  TEXT
+)
+	COMMENT 'Log the result of a failed assertion'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	IF @_fab_expect_to_fail THEN
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), FALSE);
+	ELSE
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 FALSE);
+	END IF;
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS pass //
+
+CREATE PROCEDURE pass (
+	IN p_message  TEXT
+)
+	COMMENT 'Log the result of a successful assertion'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	IF @_fab_expect_to_fail THEN
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
+	ELSE
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
+	END IF;
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS run //
+
+CREATE PROCEDURE run (
+	p_schema TEXT,
+	p_prefix TEXT
+)
+	COMMENT 'Run the unit tests for a specied database and test-prefix'
+	LANGUAGE SQL
+	DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	DECLARE l_routine_name    TEXT;
+	DECLARE l_routine_comment TEXT;
+
+	DECLARE c_test_case CURSOR FOR
+	SELECT routine_name, routine_comment
+	FROM   information_schema.routines
+	WHERE  routine_schema = p_schema
+	AND    routine_type   = 'PROCEDURE'
+	AND    routine_name   LIKE CONCAT(COALESCE(p_prefix, 'test_'), '%')
+	AND    routine_name   NOT LIKE '%_set_up'
+	AND    routine_name   NOT LIKE '%_tear_down';
+
+	DELETE FROM result;
+	SET @_fab_expect_to_fail := FALSE;
+
+	CALL assert_no_reserved_words(p_schema);
+	CALL assert_table_comments   (p_schema);
+	CALL assert_column_comments  (p_schema, NULL);
+
+	OPEN c_test_case;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_test_case;
+		LOOP
+			FETCH c_test_case INTO l_routine_name, l_routine_comment;
+			SET @_fab_routine_comment := l_routine_comment;
+			CALL execute_immediate(CONCAT('CALL ', p_schema, '.', l_routine_name));
+		END LOOP;
+	END;
+
+	SELECT script, test, CASE result WHEN TRUE THEN 'pass' ELSE 'fail' END AS result FROM result;
+
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -1098,5 +1178,198 @@ INSERT INTO reserved_word (reserved_word) VALUES
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CALL fab_unit.run(database(), null) //
+DROP TABLE IF EXISTS result //
+
+CREATE TABLE result (
+	script VARCHAR(80) NOT NULL,
+	test   VARCHAR(80) NOT NULL,
+	result BOOLEAN     NOT NULL,
+	PRIMARY KEY (script, test)
+) //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_equals //
+
+CREATE PROCEDURE test_assert_equals()
+	COMMENT 'Self-test: assert_equals()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_equals(TRUE , TRUE , 'assert_equals(TRUE , TRUE )');
+	CALL assert_equals(TRUE , 1    , 'assert_equals(TRUE , 1    )');
+	CALL assert_equals(TRUE , '1'  , 'assert_equals(TRUE , ''1'')');
+	CALL assert_equals(1    , TRUE , 'assert_equals(1    , TRUE )');
+	CALL assert_equals(1    , 1    , 'assert_equals(1    , 1    )');
+	CALL assert_equals(1    , '1'  , 'assert_equals(1    , ''1'')');
+	CALL assert_equals('1'  , TRUE , 'assert_equals(''1'', TRUE )');
+	CALL assert_equals('1'  , 1    , 'assert_equals(''1'', 1    )');
+	CALL assert_equals('1'  , '1'  , 'assert_equals(''1'', ''1'')');
+
+	CALL assert_equals(FALSE, FALSE, 'assert_equals(FALSE, FALSE)');
+	CALL assert_equals(FALSE, 0    , 'assert_equals(FALSE, 0    )');
+	CALL assert_equals(FALSE, '0'  , 'assert_equals(FALSE, ''0'')');
+	CALL assert_equals(0    , FALSE, 'assert_equals(0    , FALSE)');
+	CALL assert_equals(0    , 0    , 'assert_equals(0    , 0    )');
+	CALL assert_equals(0    , '0'  , 'assert_equals(0    , ''0'')');
+	CALL assert_equals('0'  , FALSE, 'assert_equals(''0'', FALSE)');
+	CALL assert_equals('0'  , 0    , 'assert_equals(''0'', 0    )');
+	CALL assert_equals('0'  , '0'  , 'assert_equals(''0'', ''0'')');
+
+	CALL assert_equals(NULL , NULL , 'assert_equals(NULL , NULL )');
+
+	CALL expect_to_fail(); CALL assert_equals(FALSE, TRUE , 'assert_equals(FALSE, TRUE )');
+	CALL expect_to_fail(); CALL assert_equals(FALSE, 1    , 'assert_equals(FALSE, 1    )');
+	CALL expect_to_fail(); CALL assert_equals(FALSE, '1'  , 'assert_equals(FALSE, ''1'')');
+	CALL expect_to_fail(); CALL assert_equals(0    , TRUE , 'assert_equals(0    , TRUE )');
+	CALL expect_to_fail(); CALL assert_equals(0    , 1    , 'assert_equals(0    , 1    )');
+	CALL expect_to_fail(); CALL assert_equals(0    , '1'  , 'assert_equals(0    , ''1'')');
+	CALL expect_to_fail(); CALL assert_equals('0'  , TRUE , 'assert_equals(''0'', TRUE )');
+	CALL expect_to_fail(); CALL assert_equals('0'  , 1    , 'assert_equals(''0'', 1    )');
+	CALL expect_to_fail(); CALL assert_equals('0'  , '1'  , 'assert_equals(''0'', ''1'')');
+
+	CALL expect_to_fail(); CALL assert_equals(TRUE , FALSE, 'assert_equals(TRUE , FALSE)');
+	CALL expect_to_fail(); CALL assert_equals(TRUE , 0    , 'assert_equals(TRUE , 0    )');
+	CALL expect_to_fail(); CALL assert_equals(TRUE , '0'  , 'assert_equals(TRUE , ''0'')');
+	CALL expect_to_fail(); CALL assert_equals(1    , FALSE, 'assert_equals(1    , FALSE)');
+	CALL expect_to_fail(); CALL assert_equals(1    , 0    , 'assert_equals(1    , 0    )');
+	CALL expect_to_fail(); CALL assert_equals(1    , '0'  , 'assert_equals(1    , ''0'')');
+	CALL expect_to_fail(); CALL assert_equals('1'  , FALSE, 'assert_equals(''1'', FALSE)');
+	CALL expect_to_fail(); CALL assert_equals('1'  , 0    , 'assert_equals(''1'', 0    )');
+	CALL expect_to_fail(); CALL assert_equals('1'  , '0'  , 'assert_equals(''1'', ''0'')');
+
+	CALL expect_to_fail(); CALL assert_equals(NULL , FALSE, 'assert_equals(NULL , FALSE)');
+	CALL expect_to_fail(); CALL assert_equals(NULL , TRUE , 'assert_equals(NULL , TRUE )');
+	CALL expect_to_fail(); CALL assert_equals(NULL , 0    , 'assert_equals(NULL , 0    )');
+	CALL expect_to_fail(); CALL assert_equals(NULL , 1    , 'assert_equals(NULL , 1    )');
+	CALL expect_to_fail(); CALL assert_equals(FALSE, NULL , 'assert_equals(FALSE, NULL )');
+	CALL expect_to_fail(); CALL assert_equals(TRUE , NULL , 'assert_equals(TRUE , NULL )');
+	CALL expect_to_fail(); CALL assert_equals(0    , NULL , 'assert_equals(0    , NULL )');
+	CALL expect_to_fail(); CALL assert_equals(1    , NULL , 'assert_equals(1    , NULL )');
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_false //
+
+CREATE PROCEDURE test_assert_false()
+	COMMENT 'Self-test: assert_false()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_false(FALSE, 'assert_false(FALSE)');
+	CALL assert_false(0,     'assert_false(0)'    );
+	CALL assert_false('0',   'assert_false(''0'')');
+
+	CALL expect_to_fail(); CALL assert_false(TRUE, 'assert_false(TRUE)' );
+	CALL expect_to_fail(); CALL assert_false(1,    'assert_false(1)'    );
+	CALL expect_to_fail(); CALL assert_false('1',  'assert_false(''1'')');
+	CALL expect_to_fail(); CALL assert_false(-1,   'assert_false(-1)'   );
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_not_equals //
+
+CREATE PROCEDURE test_assert_not_equals()
+	COMMENT 'Self-test: assert_not_equals()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_not_equals(FALSE, TRUE,  'assert_not_equals(FALSE, TRUE)' );
+	CALL assert_not_equals(TRUE,  FALSE, 'assert_not_equals(TRUE,  FALSE)');
+	CALL assert_not_equals(0,     1,     'assert_not_equals(0,     1)'    );
+	CALL assert_not_equals(1,     0,     'assert_not_equals(1,     0)'    );
+
+	CALL expect_to_fail(); CALL assert_not_equals(FALSE, FALSE, 'assert_not_equals(FALSE, FALSE)');
+	CALL expect_to_fail(); CALL assert_not_equals(TRUE,  TRUE,  'assert_not_equals(TRUE,  TRUE)' );
+	CALL expect_to_fail(); CALL assert_not_equals(0,     0,     'assert_not_equals(0,     0)'    );
+	CALL expect_to_fail(); CALL assert_not_equals(1,     1,     'assert_not_equals(1,     1)'    );
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert //
+
+CREATE PROCEDURE test_assert()
+	COMMENT 'Self-test: assert()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert(TRUE, 'assert(TRUE)' );
+	CALL assert(1,    'assert(1)'    );
+	CALL assert(-1,   'assert(-1)'   );
+	CALL assert('1',  'assert(''1'')');
+
+	CALL expect_to_fail(); CALL assert(FALSE, 'assert(FALSE)');
+	CALL expect_to_fail(); CALL assert(0,     'assert(0)'    );
+	CALL expect_to_fail(); CALL assert('0',   'assert(''0'')');
+END //
 

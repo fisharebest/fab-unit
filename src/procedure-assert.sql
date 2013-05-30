@@ -27,10 +27,14 @@ CREATE PROCEDURE assert (
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
+	IF @_fab_expect_to_fail THEN
+		SET p_expression := NOT p_expression;
+	END IF;
 	IF p_expression THEN
 		CALL pass(p_message);
 	ELSE
 		CALL fail(p_message);
 	END IF;
+	SET @_fab_expect_to_fail := FALSE;
 END //
 

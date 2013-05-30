@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-fab-unit.sql: src/connection.sql src/procedure-*.sql src/table-*.sql src/test.sql
+fab-unit.sql: src/connection.sql src/procedure-*.sql src/table-*.sql test/*.sql
 	cat $^ > $@
 
 clean:
@@ -23,4 +23,4 @@ clean:
 
 self-test: clean fab-unit.sql
 	mysql                     --execute "SOURCE fab-unit.sql"
-	mysql --database fab_unit --execute "CALL fab_unit.run(DATABASE())"
+	mysql --database fab_unit --execute "CALL fab_unit.run(DATABASE(), NULL)"

@@ -14,22 +14,19 @@
 --
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+-- Reverse the pass/fail status of the next assertion.
+-- This allows us to self-test both pass and fail conditions.
 
-DROP PROCEDURE IF EXISTS pass //
+DROP PROCEDURE IF EXISTS expect_to_fail //
 
-CREATE PROCEDURE pass (
-	IN p_message  TEXT
-)
-	COMMENT 'Log the result of a successful assertion'
+CREATE PROCEDURE expect_to_fail ()
+	COMMENT 'Expect the next test to fail, rather than pass'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
-	IF @_fab_expect_to_fail THEN
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
-	ELSE
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
-	END IF;
+	SET @_fab_expect_to_fail := TRUE;
 END //
 

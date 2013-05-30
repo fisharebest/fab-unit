@@ -15,5 +15,11 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CALL fab_unit.run(database(), null) //
+DROP TABLE IF EXISTS result //
 
+CREATE TABLE result (
+	script VARCHAR(80) NOT NULL,
+	test   VARCHAR(80) NOT NULL,
+	result BOOLEAN     NOT NULL,
+	PRIMARY KEY (script, test)
+) //

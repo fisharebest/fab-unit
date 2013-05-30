@@ -26,6 +26,10 @@ CREATE PROCEDURE fail (
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	SELECT p_message AS fail;
+	IF @_fab_expect_to_fail THEN
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), FALSE);
+	ELSE
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 FALSE);
+	END IF;
 END //
 

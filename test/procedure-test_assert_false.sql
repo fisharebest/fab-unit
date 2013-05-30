@@ -15,21 +15,22 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS pass //
+DROP PROCEDURE IF EXISTS test_assert_false //
 
-CREATE PROCEDURE pass (
-	IN p_message  TEXT
-)
-	COMMENT 'Log the result of a successful assertion'
+CREATE PROCEDURE test_assert_false()
+	COMMENT 'Self-test: assert_false()'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	IF @_fab_expect_to_fail THEN
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
-	ELSE
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
-	END IF;
+	CALL assert_false(FALSE, 'assert_false(FALSE)');
+	CALL assert_false(0,     'assert_false(0)'    );
+	CALL assert_false('0',   'assert_false(''0'')');
+
+	CALL expect_to_fail(); CALL assert_false(TRUE, 'assert_false(TRUE)' );
+	CALL expect_to_fail(); CALL assert_false(1,    'assert_false(1)'    );
+	CALL expect_to_fail(); CALL assert_false('1',  'assert_false(''1'')');
+	CALL expect_to_fail(); CALL assert_false(-1,   'assert_false(-1)'   );
 END //
 

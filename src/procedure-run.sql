@@ -21,7 +21,7 @@ CREATE PROCEDURE run (
 	p_schema TEXT,
 	p_prefix TEXT
 )
-	COMMENT 'Run the unit tests for current database'
+	COMMENT 'Run the unit tests for a specied database and test-prefix'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA
@@ -29,7 +29,7 @@ CREATE PROCEDURE run (
 BEGIN
 	DECLARE l_routine_name    TEXT;
 	DECLARE l_routine_comment TEXT;
-	
+
 	DECLARE c_test_case CURSOR FOR
 	SELECT routine_name, routine_comment
 	FROM   information_schema.routines
@@ -39,18 +39,24 @@ BEGIN
 	AND    routine_name   NOT LIKE '%_set_up'
 	AND    routine_name   NOT LIKE '%_tear_down';
 
-	CALL fab_unit.assert_no_reserved_words(p_schema);
-	CALL fab_unit.assert_table_comments   (p_schema);
-	CALL fab_unit.assert_column_comments  (p_schema, NULL);
+	DELETE FROM result;
+	SET @_fab_expect_to_fail := FALSE;
+
+	CALL assert_no_reserved_words(p_schema);
+	CALL assert_table_comments   (p_schema);
+	CALL assert_column_comments  (p_schema, NULL);
 
 	OPEN c_test_case;
 	BEGIN
 		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_test_case;
 		LOOP
 			FETCH c_test_case INTO l_routine_name, l_routine_comment;
-			SELECT l_routine_name, l_routine_comment;
+			SET @_fab_routine_comment := l_routine_comment;
+			CALL execute_immediate(CONCAT('CALL ', p_schema, '.', l_routine_name));
 		END LOOP;
 	END;
+
+	SELECT script, test, CASE result WHEN TRUE THEN 'pass' ELSE 'fail' END AS result FROM result;
 
 END //
 
