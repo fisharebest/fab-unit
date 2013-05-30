@@ -1263,7 +1263,6 @@ BEGIN
 	CALL expect_to_fail(); CALL assert_equals(0    , NULL , 'assert_equals(0    , NULL )');
 	CALL expect_to_fail(); CALL assert_equals(1    , NULL , 'assert_equals(1    , NULL )');
 END //
-
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
@@ -1326,17 +1325,57 @@ CREATE PROCEDURE test_assert_not_equals()
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	CALL assert_not_equals(FALSE, TRUE,  'assert_not_equals(FALSE, TRUE)' );
-	CALL assert_not_equals(TRUE,  FALSE, 'assert_not_equals(TRUE,  FALSE)');
-	CALL assert_not_equals(0,     1,     'assert_not_equals(0,     1)'    );
-	CALL assert_not_equals(1,     0,     'assert_not_equals(1,     0)'    );
+	CALL assert_not_equals(FALSE, TRUE , 'assert_not_equals(FALSE, TRUE )');
+	CALL assert_not_equals(FALSE, 1    , 'assert_not_equals(FALSE, 1    )');
+	CALL assert_not_equals(FALSE, '1'  , 'assert_not_equals(FALSE, ''1'')');
+	CALL assert_not_equals(0    , TRUE , 'assert_not_equals(0    , TRUE )');
+	CALL assert_not_equals(0    , 1    , 'assert_not_equals(0    , 1    )');
+	CALL assert_not_equals(0    , '1'  , 'assert_not_equals(0    , ''1'')');
+	CALL assert_not_equals('0'  , TRUE , 'assert_not_equals(''0'', TRUE )');
+	CALL assert_not_equals('0'  , 1    , 'assert_not_equals(''0'', 1    )');
+	CALL assert_not_equals('0'  , '1'  , 'assert_not_equals(''0'', ''1'')');
+
+	CALL assert_not_equals(TRUE , FALSE, 'assert_not_equals(TRUE , FALSE)');
+	CALL assert_not_equals(TRUE , 0    , 'assert_not_equals(TRUE , 0    )');
+	CALL assert_not_equals(TRUE , '0'  , 'assert_not_equals(TRUE , ''0'')');
+	CALL assert_not_equals(1    , FALSE, 'assert_not_equals(1    , FALSE)');
+	CALL assert_not_equals(1    , 0    , 'assert_not_equals(1    , 0    )');
+	CALL assert_not_equals(1    , '0'  , 'assert_not_equals(1    , ''0'')');
+	CALL assert_not_equals('1'  , FALSE, 'assert_not_equals(''1'', FALSE)');
+	CALL assert_not_equals('1'  , 0    , 'assert_not_equals(''1'', 0    )');
+	CALL assert_not_equals('1'  , '0'  , 'assert_not_equals(''1'', ''0'')');
+
+	CALL assert_not_equals(NULL , FALSE, 'assert_not_equals(NULL , FALSE)');
+	CALL assert_not_equals(NULL , TRUE , 'assert_not_equals(NULL , TRUE )');
+	CALL assert_not_equals(NULL , 0    , 'assert_not_equals(NULL , 0    )');
+	CALL assert_not_equals(NULL , 1    , 'assert_not_equals(NULL , 1    )');
+	CALL assert_not_equals(FALSE, NULL , 'assert_not_equals(FALSE, NULL )');
+	CALL assert_not_equals(TRUE , NULL , 'assert_not_equals(TRUE , NULL )');
+	CALL assert_not_equals(0    , NULL , 'assert_not_equals(0    , NULL )');
+	CALL assert_not_equals(1    , NULL , 'assert_not_equals(1    , NULL )');
+	
+	CALL expect_to_fail(); CALL assert_not_equals(TRUE , TRUE , 'assert_not_equals(TRUE , TRUE )');
+	CALL expect_to_fail(); CALL assert_not_equals(TRUE , 1    , 'assert_not_equals(TRUE , 1    )');
+	CALL expect_to_fail(); CALL assert_not_equals(TRUE , '1'  , 'assert_not_equals(TRUE , ''1'')');
+	CALL expect_to_fail(); CALL assert_not_equals(1    , TRUE , 'assert_not_equals(1    , TRUE )');
+	CALL expect_to_fail(); CALL assert_not_equals(1    , 1    , 'assert_not_equals(1    , 1    )');
+	CALL expect_to_fail(); CALL assert_not_equals(1    , '1'  , 'assert_not_equals(1    , ''1'')');
+	CALL expect_to_fail(); CALL assert_not_equals('1'  , TRUE , 'assert_not_equals(''1'', TRUE )');
+	CALL expect_to_fail(); CALL assert_not_equals('1'  , 1    , 'assert_not_equals(''1'', 1    )');
+	CALL expect_to_fail(); CALL assert_not_equals('1'  , '1'  , 'assert_not_equals(''1'', ''1'')');
 
 	CALL expect_to_fail(); CALL assert_not_equals(FALSE, FALSE, 'assert_not_equals(FALSE, FALSE)');
-	CALL expect_to_fail(); CALL assert_not_equals(TRUE,  TRUE,  'assert_not_equals(TRUE,  TRUE)' );
-	CALL expect_to_fail(); CALL assert_not_equals(0,     0,     'assert_not_equals(0,     0)'    );
-	CALL expect_to_fail(); CALL assert_not_equals(1,     1,     'assert_not_equals(1,     1)'    );
-END //
+	CALL expect_to_fail(); CALL assert_not_equals(FALSE, 0    , 'assert_not_equals(FALSE, 0    )');
+	CALL expect_to_fail(); CALL assert_not_equals(FALSE, '0'  , 'assert_not_equals(FALSE, ''0'')');
+	CALL expect_to_fail(); CALL assert_not_equals(0    , FALSE, 'assert_not_equals(0    , FALSE)');
+	CALL expect_to_fail(); CALL assert_not_equals(0    , 0    , 'assert_not_equals(0    , 0    )');
+	CALL expect_to_fail(); CALL assert_not_equals(0    , '0'  , 'assert_not_equals(0    , ''0'')');
+	CALL expect_to_fail(); CALL assert_not_equals('0'  , FALSE, 'assert_not_equals(''0'', FALSE)');
+	CALL expect_to_fail(); CALL assert_not_equals('0'  , 0    , 'assert_not_equals(''0'', 0    )');
+	CALL expect_to_fail(); CALL assert_not_equals('0'  , '0'  , 'assert_not_equals(''0'', ''0'')');
 
+	CALL expect_to_fail(); CALL assert_not_equals(NULL , NULL , 'assert_not_equals(NULL , NULL )');
+END //
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com

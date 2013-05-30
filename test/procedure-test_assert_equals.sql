@@ -75,4 +75,3 @@ BEGIN
 	CALL expect_to_fail(); CALL assert_equals(0    , NULL , 'assert_equals(0    , NULL )');
 	CALL expect_to_fail(); CALL assert_equals(1    , NULL , 'assert_equals(1    , NULL )');
 END //
-
