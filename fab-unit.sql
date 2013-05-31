@@ -54,8 +54,9 @@ USE fab_unit //
 DROP PROCEDURE IF EXISTS assert_column_comments //
 
 CREATE PROCEDURE assert_column_comments(
-	p_schema TEXT,
-	p_table  TEXT
+	IN p_schema  TEXT,
+	IN p_table   TEXT,
+	IN p_message TEXT
 )
 	COMMENT 'Check that all columns have comments'
 	LANGUAGE SQL
@@ -63,6 +64,29 @@ CREATE PROCEDURE assert_column_comments(
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
+	DECLARE l_column TEXT;
+
+	DECLARE c_column CURSOR FOR
+	SELECT column_name
+	FROM   information_schema.columns
+	JOIN   information_schema.tables USING (table_schema, table_name)
+	WHERE  table_schema = p_schema
+	AND    table_type = 'BASE TABLE'
+	AND    table_name = p_table
+	AND    column_comment = '';
+
+	OPEN c_column;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_column;
+		LOOP
+			FETCH c_column INTO l_column;
+			CALL assert(FALSE, CONCAT('assert_column_comments(', p_table, '.', l_column, ')'));
+		END LOOP;
+	END;
+
+	IF l_column IS NULL THEN
+		CALL assert(TRUE, CONCAT('assert_column_comments(', p_table, ')'));
+	END IF;
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -221,7 +245,7 @@ END //
 DROP PROCEDURE IF EXISTS assert_no_reserved_words //
 
 CREATE PROCEDURE assert_no_reserved_words(
-	p_schema TEXT
+	IN p_schema TEXT
 )
 	COMMENT 'Check if any schema objects are named after reserved words'
 	LANGUAGE SQL
@@ -582,7 +606,7 @@ END //
 DROP PROCEDURE IF EXISTS assert_routine_comments //
 
 CREATE PROCEDURE assert_routine_comments(
-	p_schema TEXT
+	IN p_schema TEXT
 )
 	COMMENT 'Check that all procedures and functions have comments'
 	LANGUAGE SQL
@@ -652,7 +676,7 @@ END //
 DROP PROCEDURE IF EXISTS assert_table_comments //
 
 CREATE PROCEDURE assert_table_comments(
-	p_schema TEXT
+	IN p_schema TEXT
 )
 	COMMENT 'Check that all tables have comments'
 	LANGUAGE SQL
@@ -752,7 +776,7 @@ END //
 
 DROP PROCEDURE IF EXISTS expect_to_fail //
 
-CREATE PROCEDURE expect_to_fail ()
+CREATE PROCEDURE expect_to_fail()
 	COMMENT 'Expect the next test to fail, rather than pass'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
@@ -791,9 +815,11 @@ CREATE PROCEDURE fail (
 	SQL SECURITY DEFINER
 BEGIN
 	IF @_fab_expect_to_fail THEN
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), FALSE);
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), FALSE)
+		ON DUPLICATE KEY UPDATE result = FALSE;
 	ELSE
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 FALSE);
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 FALSE)
+		ON DUPLICATE KEY UPDATE result = FALSE;
 	END IF;
 END //
 
@@ -826,9 +852,9 @@ CREATE PROCEDURE pass (
 	SQL SECURITY DEFINER
 BEGIN
 	IF @_fab_expect_to_fail THEN
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
+		INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
 	ELSE
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
+		INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
 	END IF;
 END //
 
@@ -852,8 +878,8 @@ END //
 DROP PROCEDURE IF EXISTS run //
 
 CREATE PROCEDURE run (
-	p_schema TEXT,
-	p_prefix TEXT
+	IN p_schema TEXT,
+	IN p_prefix TEXT
 )
 	COMMENT 'Run the unit tests for a specied database and test-prefix'
 	LANGUAGE SQL
@@ -876,9 +902,11 @@ BEGIN
 	DELETE FROM result;
 	SET @_fab_expect_to_fail := FALSE;
 
+	/*
 	CALL assert_no_reserved_words(p_schema);
 	CALL assert_table_comments   (p_schema);
 	CALL assert_column_comments  (p_schema, NULL);
+	*/
 
 	OPEN c_test_case;
 	BEGIN
@@ -890,7 +918,18 @@ BEGIN
 		END LOOP;
 	END;
 
-	SELECT script, test, CASE result WHEN TRUE THEN 'pass' ELSE 'fail' END AS result FROM result;
+	SELECT
+		script,
+		CASE WHEN MIN(result)
+			THEN 'pass'
+			ELSE 'fail'
+		END AS result,
+		CASE WHEN MIN(result)
+			THEN CONCAT(COUNT(result), CASE WHEN COUNT(result)=1 THEN ' test' ELSE ' tests' END)
+			ELSE GROUP_CONCAT(CASE WHEN result THEN NULL ELSE test END SEPARATOR '; ')
+		END AS details
+	FROM result
+	GROUP BY script;
 
 END //
 
@@ -914,11 +953,10 @@ END //
 DROP TABLE IF EXISTS reserved_word //
 
 CREATE TABLE reserved_word (
-	reserved_word VARCHAR(31) COLLATE utf8mb4_general_ci NOT NULL,
+	reserved_word VARCHAR(31) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'See https://dev.mysql.com/doc/refman/5.7/en/reserved-words.html',
 	PRIMARY KEY (reserved_word)
 ) //
 
--- See https://dev.mysql.com/doc/refman/5.7/en/reserved-words.html
 INSERT INTO reserved_word (reserved_word) VALUES
 ('ACCESSIBLE'),
 ('ACTION'),
@@ -1181,11 +1219,46 @@ INSERT INTO reserved_word (reserved_word) VALUES
 DROP TABLE IF EXISTS result //
 
 CREATE TABLE result (
-	script VARCHAR(80) NOT NULL,
-	test   VARCHAR(80) NOT NULL,
-	result BOOLEAN     NOT NULL,
+	script VARCHAR(80) NOT NULL COMMENT 'Name of the test script/procedure',
+	test   VARCHAR(80) NOT NULL COMMENT 'Description of the test',
+	result BOOLEAN     NOT NULL COMMENT 'TRUE=pass, FALSE=fail',
 	PRIMARY KEY (script, test)
 ) //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_column_comments //
+
+CREATE PROCEDURE test_assert_column_comments()
+	COMMENT 'Self-test: assert_column_comments()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_column_comments(DATABASE(), 'reserved_word', 'assert_column_comments(''reserved_word'')');
+	CALL assert_column_comments(DATABASE(), 'result',        'assert_column_comments(''result'')'       );
+
+	CREATE TABLE foo (bar INTEGER);
+	CALL expect_to_fail();
+	CALL assert_column_comments(DATABASE(), 'foo', 'assert_column_comments(''foo'')');
+	DROP TABLE foo;
+
+END //
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
@@ -1212,56 +1285,56 @@ CREATE PROCEDURE test_assert_equals()
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	CALL assert_equals(TRUE , TRUE , 'assert_equals(TRUE , TRUE )');
-	CALL assert_equals(TRUE , 1    , 'assert_equals(TRUE , 1    )');
-	CALL assert_equals(TRUE , '1'  , 'assert_equals(TRUE , ''1'')');
-	CALL assert_equals(1    , TRUE , 'assert_equals(1    , TRUE )');
-	CALL assert_equals(1    , 1    , 'assert_equals(1    , 1    )');
-	CALL assert_equals(1    , '1'  , 'assert_equals(1    , ''1'')');
-	CALL assert_equals('1'  , TRUE , 'assert_equals(''1'', TRUE )');
-	CALL assert_equals('1'  , 1    , 'assert_equals(''1'', 1    )');
-	CALL assert_equals('1'  , '1'  , 'assert_equals(''1'', ''1'')');
+	CALL assert_equals(TRUE,  TRUE,  'assert_equals(TRUE, TRUE)'  );
+	CALL assert_equals(TRUE,  1,     'assert_equals(TRUE, 1)'     );
+	CALL assert_equals(TRUE,  '1',   'assert_equals(TRUE, ''1'')' );
+	CALL assert_equals(1,     TRUE,  'assert_equals(1, TRUE)'     );
+	CALL assert_equals(1,     1,     'assert_equals(1, 1)'        );
+	CALL assert_equals(1,     '1',   'assert_equals(1, ''1'')'    );
+	CALL assert_equals('1',   TRUE,  'assert_equals(''1'', TRUE)' );
+	CALL assert_equals('1',   1,     'assert_equals(''1'', 1)'    );
+	CALL assert_equals('1',   '1',   'assert_equals(''1'', ''1'')');
 
 	CALL assert_equals(FALSE, FALSE, 'assert_equals(FALSE, FALSE)');
-	CALL assert_equals(FALSE, 0    , 'assert_equals(FALSE, 0    )');
-	CALL assert_equals(FALSE, '0'  , 'assert_equals(FALSE, ''0'')');
-	CALL assert_equals(0    , FALSE, 'assert_equals(0    , FALSE)');
-	CALL assert_equals(0    , 0    , 'assert_equals(0    , 0    )');
-	CALL assert_equals(0    , '0'  , 'assert_equals(0    , ''0'')');
-	CALL assert_equals('0'  , FALSE, 'assert_equals(''0'', FALSE)');
-	CALL assert_equals('0'  , 0    , 'assert_equals(''0'', 0    )');
-	CALL assert_equals('0'  , '0'  , 'assert_equals(''0'', ''0'')');
+	CALL assert_equals(FALSE, 0,     'assert_equals(FALSE, 0)'    );
+	CALL assert_equals(FALSE, '0',   'assert_equals(FALSE, ''0'')');
+	CALL assert_equals(0,     FALSE, 'assert_equals(0, FALSE)'    );
+	CALL assert_equals(0,     0,     'assert_equals(0, 0)'        );
+	CALL assert_equals(0,     '0',   'assert_equals(0, ''0'')'    );
+	CALL assert_equals('0',   FALSE, 'assert_equals(''0'', FALSE)');
+	CALL assert_equals('0',   0,     'assert_equals(''0'', 0)'    );
+	CALL assert_equals('0',   '0',   'assert_equals(''0'', ''0'')');
 
-	CALL assert_equals(NULL , NULL , 'assert_equals(NULL , NULL )');
+	CALL assert_equals(NULL,  NULL,  'assert_equals(NULL, NULL)'  );
 
-	CALL expect_to_fail(); CALL assert_equals(FALSE, TRUE , 'assert_equals(FALSE, TRUE )');
-	CALL expect_to_fail(); CALL assert_equals(FALSE, 1    , 'assert_equals(FALSE, 1    )');
-	CALL expect_to_fail(); CALL assert_equals(FALSE, '1'  , 'assert_equals(FALSE, ''1'')');
-	CALL expect_to_fail(); CALL assert_equals(0    , TRUE , 'assert_equals(0    , TRUE )');
-	CALL expect_to_fail(); CALL assert_equals(0    , 1    , 'assert_equals(0    , 1    )');
-	CALL expect_to_fail(); CALL assert_equals(0    , '1'  , 'assert_equals(0    , ''1'')');
-	CALL expect_to_fail(); CALL assert_equals('0'  , TRUE , 'assert_equals(''0'', TRUE )');
-	CALL expect_to_fail(); CALL assert_equals('0'  , 1    , 'assert_equals(''0'', 1    )');
-	CALL expect_to_fail(); CALL assert_equals('0'  , '1'  , 'assert_equals(''0'', ''1'')');
+	CALL expect_to_fail(); CALL assert_equals(FALSE, TRUE,  'assert_equals(FALSE, TRUE)' );
+	CALL expect_to_fail(); CALL assert_equals(FALSE, 1,     'assert_equals(FALSE, 1)'    );
+	CALL expect_to_fail(); CALL assert_equals(FALSE, '1',   'assert_equals(FALSE, ''1'')');
+	CALL expect_to_fail(); CALL assert_equals(0,     TRUE,  'assert_equals(0, TRUE)'     );
+	CALL expect_to_fail(); CALL assert_equals(0,     1,     'assert_equals(0, 1)'        );
+	CALL expect_to_fail(); CALL assert_equals(0,     '1',   'assert_equals(0, ''1'')'    );
+	CALL expect_to_fail(); CALL assert_equals('0',   TRUE,  'assert_equals(''0'', TRUE)' );
+	CALL expect_to_fail(); CALL assert_equals('0',   1,     'assert_equals(''0'', 1)'    );
+	CALL expect_to_fail(); CALL assert_equals('0',   '1',   'assert_equals(''0'', ''1'')');
 
-	CALL expect_to_fail(); CALL assert_equals(TRUE , FALSE, 'assert_equals(TRUE , FALSE)');
-	CALL expect_to_fail(); CALL assert_equals(TRUE , 0    , 'assert_equals(TRUE , 0    )');
-	CALL expect_to_fail(); CALL assert_equals(TRUE , '0'  , 'assert_equals(TRUE , ''0'')');
-	CALL expect_to_fail(); CALL assert_equals(1    , FALSE, 'assert_equals(1    , FALSE)');
-	CALL expect_to_fail(); CALL assert_equals(1    , 0    , 'assert_equals(1    , 0    )');
-	CALL expect_to_fail(); CALL assert_equals(1    , '0'  , 'assert_equals(1    , ''0'')');
-	CALL expect_to_fail(); CALL assert_equals('1'  , FALSE, 'assert_equals(''1'', FALSE)');
-	CALL expect_to_fail(); CALL assert_equals('1'  , 0    , 'assert_equals(''1'', 0    )');
-	CALL expect_to_fail(); CALL assert_equals('1'  , '0'  , 'assert_equals(''1'', ''0'')');
+	CALL expect_to_fail(); CALL assert_equals(TRUE,  FALSE, 'assert_equals(TRUE, FALSE)' );
+	CALL expect_to_fail(); CALL assert_equals(TRUE,  0,     'assert_equals(TRUE, 0)'     );
+	CALL expect_to_fail(); CALL assert_equals(TRUE,  '0',   'assert_equals(TRUE, ''0'')' );
+	CALL expect_to_fail(); CALL assert_equals(1,     FALSE, 'assert_equals(1, FALSE)'    );
+	CALL expect_to_fail(); CALL assert_equals(1,     0,     'assert_equals(1, 0)'        );
+	CALL expect_to_fail(); CALL assert_equals(1,     '0',   'assert_equals(1, ''0'')'    );
+	CALL expect_to_fail(); CALL assert_equals('1',   FALSE, 'assert_equals(''1'', FALSE)');
+	CALL expect_to_fail(); CALL assert_equals('1',   0,     'assert_equals(''1'', 0)'    );
+	CALL expect_to_fail(); CALL assert_equals('1',   '0',   'assert_equals(''1'', ''0'')');
 
-	CALL expect_to_fail(); CALL assert_equals(NULL , FALSE, 'assert_equals(NULL , FALSE)');
-	CALL expect_to_fail(); CALL assert_equals(NULL , TRUE , 'assert_equals(NULL , TRUE )');
-	CALL expect_to_fail(); CALL assert_equals(NULL , 0    , 'assert_equals(NULL , 0    )');
-	CALL expect_to_fail(); CALL assert_equals(NULL , 1    , 'assert_equals(NULL , 1    )');
-	CALL expect_to_fail(); CALL assert_equals(FALSE, NULL , 'assert_equals(FALSE, NULL )');
-	CALL expect_to_fail(); CALL assert_equals(TRUE , NULL , 'assert_equals(TRUE , NULL )');
-	CALL expect_to_fail(); CALL assert_equals(0    , NULL , 'assert_equals(0    , NULL )');
-	CALL expect_to_fail(); CALL assert_equals(1    , NULL , 'assert_equals(1    , NULL )');
+	CALL expect_to_fail(); CALL assert_equals(NULL,  FALSE, 'assert_equals(NULL, FALSE)' );
+	CALL expect_to_fail(); CALL assert_equals(NULL,  TRUE,  'assert_equals(NULL, TRUE)'  );
+	CALL expect_to_fail(); CALL assert_equals(NULL,  0,     'assert_equals(NULL, 0)'     );
+	CALL expect_to_fail(); CALL assert_equals(NULL,  1,     'assert_equals(NULL, 1)'     );
+	CALL expect_to_fail(); CALL assert_equals(FALSE, NULL,  'assert_equals(FALSE, NULL)' );
+	CALL expect_to_fail(); CALL assert_equals(TRUE,  NULL,  'assert_equals(TRUE, NULL)'  );
+	CALL expect_to_fail(); CALL assert_equals(0,     NULL,  'assert_equals(0, NULL)'     );
+	CALL expect_to_fail(); CALL assert_equals(1,     NULL,  'assert_equals(1, NULL)'     );
 END //
 -- fab-unit - A unit test framework for MySQL applications
 --
@@ -1316,65 +1389,31 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS test_assert_not_equals //
+DROP PROCEDURE IF EXISTS test_assert_like //
 
-CREATE PROCEDURE test_assert_not_equals()
-	COMMENT 'Self-test: assert_not_equals()'
+CREATE PROCEDURE test_assert_like()
+	COMMENT 'Self-test: assert_like()'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	CALL assert_not_equals(FALSE, TRUE , 'assert_not_equals(FALSE, TRUE )');
-	CALL assert_not_equals(FALSE, 1    , 'assert_not_equals(FALSE, 1    )');
-	CALL assert_not_equals(FALSE, '1'  , 'assert_not_equals(FALSE, ''1'')');
-	CALL assert_not_equals(0    , TRUE , 'assert_not_equals(0    , TRUE )');
-	CALL assert_not_equals(0    , 1    , 'assert_not_equals(0    , 1    )');
-	CALL assert_not_equals(0    , '1'  , 'assert_not_equals(0    , ''1'')');
-	CALL assert_not_equals('0'  , TRUE , 'assert_not_equals(''0'', TRUE )');
-	CALL assert_not_equals('0'  , 1    , 'assert_not_equals(''0'', 1    )');
-	CALL assert_not_equals('0'  , '1'  , 'assert_not_equals(''0'', ''1'')');
+	CALL assert_like('foo', 'foo', 'assert_like(''foo'',''foo'')');
+	CALL assert_like('foo', 'fo_', 'assert_like(''foo'',''fo_'')');
+	CALL assert_like('foo', 'f_o', 'assert_like(''foo'',''f_o'')');
+	CALL assert_like('foo', '_oo', 'assert_like(''foo'',''_oo'')');
+	CALL assert_like('foo', '_o_', 'assert_like(''foo'',''_o_'')');
+	CALL assert_like('foo', '%',   'assert_like(''foo'',''%'')'  );
+	CALL assert_like('foo', 'f%',  'assert_like(''foo'',''f%'')' );
+	CALL assert_like('foo', '%o',  'assert_like(''foo'',''%o'')' );
 
-	CALL assert_not_equals(TRUE , FALSE, 'assert_not_equals(TRUE , FALSE)');
-	CALL assert_not_equals(TRUE , 0    , 'assert_not_equals(TRUE , 0    )');
-	CALL assert_not_equals(TRUE , '0'  , 'assert_not_equals(TRUE , ''0'')');
-	CALL assert_not_equals(1    , FALSE, 'assert_not_equals(1    , FALSE)');
-	CALL assert_not_equals(1    , 0    , 'assert_not_equals(1    , 0    )');
-	CALL assert_not_equals(1    , '0'  , 'assert_not_equals(1    , ''0'')');
-	CALL assert_not_equals('1'  , FALSE, 'assert_not_equals(''1'', FALSE)');
-	CALL assert_not_equals('1'  , 0    , 'assert_not_equals(''1'', 0    )');
-	CALL assert_not_equals('1'  , '0'  , 'assert_not_equals(''1'', ''0'')');
-
-	CALL assert_not_equals(NULL , FALSE, 'assert_not_equals(NULL , FALSE)');
-	CALL assert_not_equals(NULL , TRUE , 'assert_not_equals(NULL , TRUE )');
-	CALL assert_not_equals(NULL , 0    , 'assert_not_equals(NULL , 0    )');
-	CALL assert_not_equals(NULL , 1    , 'assert_not_equals(NULL , 1    )');
-	CALL assert_not_equals(FALSE, NULL , 'assert_not_equals(FALSE, NULL )');
-	CALL assert_not_equals(TRUE , NULL , 'assert_not_equals(TRUE , NULL )');
-	CALL assert_not_equals(0    , NULL , 'assert_not_equals(0    , NULL )');
-	CALL assert_not_equals(1    , NULL , 'assert_not_equals(1    , NULL )');
-	
-	CALL expect_to_fail(); CALL assert_not_equals(TRUE , TRUE , 'assert_not_equals(TRUE , TRUE )');
-	CALL expect_to_fail(); CALL assert_not_equals(TRUE , 1    , 'assert_not_equals(TRUE , 1    )');
-	CALL expect_to_fail(); CALL assert_not_equals(TRUE , '1'  , 'assert_not_equals(TRUE , ''1'')');
-	CALL expect_to_fail(); CALL assert_not_equals(1    , TRUE , 'assert_not_equals(1    , TRUE )');
-	CALL expect_to_fail(); CALL assert_not_equals(1    , 1    , 'assert_not_equals(1    , 1    )');
-	CALL expect_to_fail(); CALL assert_not_equals(1    , '1'  , 'assert_not_equals(1    , ''1'')');
-	CALL expect_to_fail(); CALL assert_not_equals('1'  , TRUE , 'assert_not_equals(''1'', TRUE )');
-	CALL expect_to_fail(); CALL assert_not_equals('1'  , 1    , 'assert_not_equals(''1'', 1    )');
-	CALL expect_to_fail(); CALL assert_not_equals('1'  , '1'  , 'assert_not_equals(''1'', ''1'')');
-
-	CALL expect_to_fail(); CALL assert_not_equals(FALSE, FALSE, 'assert_not_equals(FALSE, FALSE)');
-	CALL expect_to_fail(); CALL assert_not_equals(FALSE, 0    , 'assert_not_equals(FALSE, 0    )');
-	CALL expect_to_fail(); CALL assert_not_equals(FALSE, '0'  , 'assert_not_equals(FALSE, ''0'')');
-	CALL expect_to_fail(); CALL assert_not_equals(0    , FALSE, 'assert_not_equals(0    , FALSE)');
-	CALL expect_to_fail(); CALL assert_not_equals(0    , 0    , 'assert_not_equals(0    , 0    )');
-	CALL expect_to_fail(); CALL assert_not_equals(0    , '0'  , 'assert_not_equals(0    , ''0'')');
-	CALL expect_to_fail(); CALL assert_not_equals('0'  , FALSE, 'assert_not_equals(''0'', FALSE)');
-	CALL expect_to_fail(); CALL assert_not_equals('0'  , 0    , 'assert_not_equals(''0'', 0    )');
-	CALL expect_to_fail(); CALL assert_not_equals('0'  , '0'  , 'assert_not_equals(''0'', ''0'')');
-
-	CALL expect_to_fail(); CALL assert_not_equals(NULL , NULL , 'assert_not_equals(NULL , NULL )');
+	CALL expect_to_fail; CALL assert_like('foo', 'bar', 'assert_like(''foo'',''bar'')');
+	CALL expect_to_fail; CALL assert_like('foo', 'ba_', 'assert_like(''foo'',''ba_'')');
+	CALL expect_to_fail; CALL assert_like('foo', 'b_r', 'assert_like(''foo'',''b_r'')');
+	CALL expect_to_fail; CALL assert_like('foo', '_ar', 'assert_like(''foo'',''_ar'')');
+	CALL expect_to_fail; CALL assert_like('foo', '_a_', 'assert_like(''foo'',''_a_'')');
+	CALL expect_to_fail; CALL assert_like('foo', 'b%',  'assert_like(''foo'',''b%'')' );
+	CALL expect_to_fail; CALL assert_like('foo', '%r',  'assert_like(''foo'',''%r'')' );
 END //
 -- fab-unit - A unit test framework for MySQL applications
 --
@@ -1393,6 +1432,128 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+DROP PROCEDURE IF EXISTS test_assert_not_equals //
+
+CREATE PROCEDURE test_assert_not_equals()
+	COMMENT 'Self-test: assert_not_equals()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_not_equals(FALSE, TRUE,  'assert_not_equals(FALSE, TRUE )');
+	CALL assert_not_equals(FALSE, 1,     'assert_not_equals(FALSE, 1)'    );
+	CALL assert_not_equals(FALSE, '1',   'assert_not_equals(FALSE, ''1'')');
+	CALL assert_not_equals(0,     TRUE,  'assert_not_equals(0, TRUE)'     );
+	CALL assert_not_equals(0,     1,     'assert_not_equals(0, 1)'        );
+	CALL assert_not_equals(0,     '1',   'assert_not_equals(0, ''1'')'    );
+	CALL assert_not_equals('0',   TRUE,  'assert_not_equals(''0'', TRUE)' );
+	CALL assert_not_equals('0',   1,     'assert_not_equals(''0'', 1)'    );
+	CALL assert_not_equals('0',   '1',   'assert_not_equals(''0'', ''1'')');
+
+	CALL assert_not_equals(TRUE,  FALSE, 'assert_not_equals(TRUE, FALSE)' );
+	CALL assert_not_equals(TRUE,  0,     'assert_not_equals(TRUE, 0)'     );
+	CALL assert_not_equals(TRUE,  '0',   'assert_not_equals(TRUE, ''0'')' );
+	CALL assert_not_equals(1,     FALSE, 'assert_not_equals(1, FALSE)'    );
+	CALL assert_not_equals(1,     0,     'assert_not_equals(1, 0)'        );
+	CALL assert_not_equals(1,     '0',   'assert_not_equals(1, ''0'')'    );
+	CALL assert_not_equals('1',   FALSE, 'assert_not_equals(''1'', FALSE)');
+	CALL assert_not_equals('1',   0,     'assert_not_equals(''1'', 0)'    );
+	CALL assert_not_equals('1',   '0',   'assert_not_equals(''1'', ''0'')');
+
+	CALL assert_not_equals(NULL,  FALSE, 'assert_not_equals(NULL, FALSE)' );
+	CALL assert_not_equals(NULL,  TRUE,  'assert_not_equals(NULL, TRUE)'  );
+	CALL assert_not_equals(NULL,  0,     'assert_not_equals(NULL, 0)'     );
+	CALL assert_not_equals(NULL,  1,     'assert_not_equals(NULL, 1)'     );
+	CALL assert_not_equals(FALSE, NULL,  'assert_not_equals(FALSE, NULL)' );
+	CALL assert_not_equals(TRUE,  NULL,  'assert_not_equals(TRUE, NULL)'  );
+	CALL assert_not_equals(0,     NULL,  'assert_not_equals(0, NULL)'     );
+	CALL assert_not_equals(1,     NULL,  'assert_not_equals(1, NULL)'     );
+	
+	CALL expect_to_fail(); CALL assert_not_equals(TRUE,  TRUE,  'assert_not_equals(TRUE, TRUE)'  );
+	CALL expect_to_fail(); CALL assert_not_equals(TRUE,  1,     'assert_not_equals(TRUE, 1)'     );
+	CALL expect_to_fail(); CALL assert_not_equals(TRUE,  '1',   'assert_not_equals(TRUE, ''1'')' );
+	CALL expect_to_fail(); CALL assert_not_equals(1,     TRUE,  'assert_not_equals(1, TRUE)'     );
+	CALL expect_to_fail(); CALL assert_not_equals(1,     1,     'assert_not_equals(1, 1)'        );
+	CALL expect_to_fail(); CALL assert_not_equals(1,     '1',   'assert_not_equals(1, ''1'')'    );
+	CALL expect_to_fail(); CALL assert_not_equals('1',   TRUE,  'assert_not_equals(''1'', TRUE )');
+	CALL expect_to_fail(); CALL assert_not_equals('1',   1,     'assert_not_equals(''1'', 1)'    );
+	CALL expect_to_fail(); CALL assert_not_equals('1',   '1',   'assert_not_equals(''1'', ''1'')');
+
+	CALL expect_to_fail(); CALL assert_not_equals(FALSE, FALSE, 'assert_not_equals(FALSE, FALSE)');
+	CALL expect_to_fail(); CALL assert_not_equals(FALSE, 0,     'assert_not_equals(FALSE, 0)'    );
+	CALL expect_to_fail(); CALL assert_not_equals(FALSE, '0',   'assert_not_equals(FALSE, ''0'')');
+	CALL expect_to_fail(); CALL assert_not_equals(0,     FALSE, 'assert_not_equals(0, FALSE)'    );
+	CALL expect_to_fail(); CALL assert_not_equals(0,     0,     'assert_not_equals(0, 0)'        );
+	CALL expect_to_fail(); CALL assert_not_equals(0,     '0',   'assert_not_equals(0, ''0'')'    );
+	CALL expect_to_fail(); CALL assert_not_equals('0',   FALSE, 'assert_not_equals(''0'', FALSE)');
+	CALL expect_to_fail(); CALL assert_not_equals('0',   0,     'assert_not_equals(''0'', 0)'    );
+	CALL expect_to_fail(); CALL assert_not_equals('0',   '0',   'assert_not_equals(''0'', ''0'')');
+
+	CALL expect_to_fail(); CALL assert_not_equals(NULL,  NULL,  'assert_not_equals(NULL,  NULL )');
+END //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_not_like //
+
+CREATE PROCEDURE test_assert_not_like()
+	COMMENT 'Self-test: assert_not_like()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_not_like('foo', 'bar', 'assert_not_like(''foo'',''bar'')');
+	CALL assert_not_like('foo', 'ba_', 'assert_not_like(''foo'',''ba_'')');
+	CALL assert_not_like('foo', 'b_r', 'assert_not_like(''foo'',''b_r'')');
+	CALL assert_not_like('foo', '_ar', 'assert_not_like(''foo'',''_ar'')');
+	CALL assert_not_like('foo', '_a_', 'assert_not_like(''foo'',''_a_'')');
+	CALL assert_not_like('foo', 'b%',  'assert_not_like(''foo'',''b%'')' );
+	CALL assert_not_like('foo', '%r',  'assert_not_like(''foo'',''%r'')' );
+
+	CALL expect_to_fail; CALL assert_not_like('foo', 'foo', 'assert_not_like(''foo'',''foo'')');
+	CALL expect_to_fail; CALL assert_not_like('foo', 'fo_', 'assert_not_like(''foo'',''fo_'')');
+	CALL expect_to_fail; CALL assert_not_like('foo', 'f_o', 'assert_not_like(''foo'',''f_o'')');
+	CALL expect_to_fail; CALL assert_not_like('foo', '_oo', 'assert_not_like(''foo'',''_oo'')');
+	CALL expect_to_fail; CALL assert_not_like('foo', '_o_', 'assert_not_like(''foo'',''_o_'')');
+	CALL expect_to_fail; CALL assert_not_like('foo', '%',   'assert_not_like(''foo'',''%'')'  );
+	CALL expect_to_fail; CALL assert_not_like('foo', 'f%',  'assert_not_like(''foo'',''f%'')' );
+	CALL expect_to_fail; CALL assert_not_like('foo', '%o',  'assert_not_like(''foo'',''%o'')' );
+END //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+-- NOTE: test_assert_true() is identical to this test
+
 DROP PROCEDURE IF EXISTS test_assert //
 
 CREATE PROCEDURE test_assert()
@@ -1407,8 +1568,130 @@ BEGIN
 	CALL assert(-1,   'assert(-1)'   );
 	CALL assert('1',  'assert(''1'')');
 
-	CALL expect_to_fail(); CALL assert(FALSE, 'assert(FALSE)');
-	CALL expect_to_fail(); CALL assert(0,     'assert(0)'    );
-	CALL expect_to_fail(); CALL assert('0',   'assert(''0'')');
+	CALL expect_to_fail; CALL assert(FALSE, 'assert(FALSE)');
+	CALL expect_to_fail; CALL assert(0,     'assert(0)'    );
+	CALL expect_to_fail; CALL assert('0',   'assert(''0'')');
 END //
 
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+-- NOTE: This test is identical to test_assert()
+
+DROP PROCEDURE IF EXISTS test_assert_true //
+
+CREATE PROCEDURE test_assert_true()
+	COMMENT 'Self-test: assert_true()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert(TRUE, 'assert_true(TRUE)' );
+	CALL assert(1,    'assert_true(1)'    );
+	CALL assert(-1,   'assert_true(-1)'   );
+	CALL assert('1',  'assert_true(''1'')');
+
+	CALL expect_to_fail; CALL assert_true(FALSE, 'assert_true(FALSE)');
+	CALL expect_to_fail; CALL assert_true(0,     'assert_true(0)'    );
+	CALL expect_to_fail; CALL assert_true('0',   'assert_true(''0'')');
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_coverage //
+
+CREATE PROCEDURE test_coverage()
+	COMMENT 'Self-test: test_coverage()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	DECLARE l_routine TEXT;
+
+	DECLARE c_coverage CURSOR FOR
+	SELECT r1.routine_name
+	FROM       information_schema.routines r1
+	LEFT JOIN  information_schema.routines r2 ON (r1.routine_schema=r2.routine_schema AND r2.routine_name = CONCAT('test_', r1.routine_name))
+	WHERE  r1.routine_schema = DATABASE()
+	AND    r1.routine_name LIKE 'assert_%'
+	AND    r2.routine_name IS NULL;
+
+	OPEN c_coverage;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_coverage;
+		LOOP
+			FETCH c_coverage INTO l_routine;
+			CALL assert(FALSE, CONCAT('No test script for ', l_routine, '()'));
+		END LOOP;
+	END;
+
+	IF l_routine IS NULL THEN
+		CALL assert(TRUE, 'All assertions have test scripts');
+	END IF;
+END //
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_null //
+
+CREATE PROCEDURE test_assert_null()
+	COMMENT 'Self-test: assert_null()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_null(NULL, 'assert_null(NULL)');
+
+	CALL expect_to_fail; CALL assert_null(FALSE, 'assert_null(FALSE)');
+	CALL expect_to_fail; CALL assert_null(TRUE,  'assert_null(TRUE)' );
+	CALL expect_to_fail; CALL assert_null(0,     'assert_null(0)'    );
+	CALL expect_to_fail; CALL assert_null(1,     'assert_null(1)'    );
+	CALL expect_to_fail; CALL assert_null('0',   'assert_null(''0'')');
+	CALL expect_to_fail; CALL assert_null('1',   'assert_null(''1'')');
+END //

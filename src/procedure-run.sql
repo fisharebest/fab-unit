@@ -18,8 +18,8 @@
 DROP PROCEDURE IF EXISTS run //
 
 CREATE PROCEDURE run (
-	p_schema TEXT,
-	p_prefix TEXT
+	IN p_schema TEXT,
+	IN p_prefix TEXT
 )
 	COMMENT 'Run the unit tests for a specied database and test-prefix'
 	LANGUAGE SQL
@@ -42,9 +42,11 @@ BEGIN
 	DELETE FROM result;
 	SET @_fab_expect_to_fail := FALSE;
 
+	/*
 	CALL assert_no_reserved_words(p_schema);
 	CALL assert_table_comments   (p_schema);
 	CALL assert_column_comments  (p_schema, NULL);
+	*/
 
 	OPEN c_test_case;
 	BEGIN
@@ -64,7 +66,7 @@ BEGIN
 		END AS result,
 		CASE WHEN MIN(result)
 			THEN CONCAT(COUNT(result), CASE WHEN COUNT(result)=1 THEN ' test' ELSE ' tests' END)
-			ELSE GROUP_CONCAT(CASE WHEN result THEN NULL ELSE test END SEPARATOR '\n')
+			ELSE GROUP_CONCAT(CASE WHEN result THEN NULL ELSE test END SEPARATOR '; ')
 		END AS details
 	FROM result
 	GROUP BY script;

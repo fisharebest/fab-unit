@@ -18,8 +18,9 @@
 DROP PROCEDURE IF EXISTS assert_column_comments //
 
 CREATE PROCEDURE assert_column_comments(
-	p_schema TEXT,
-	p_table  TEXT
+	IN p_schema  TEXT,
+	IN p_table   TEXT,
+	IN p_message TEXT
 )
 	COMMENT 'Check that all columns have comments'
 	LANGUAGE SQL
@@ -27,5 +28,28 @@ CREATE PROCEDURE assert_column_comments(
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
+	DECLARE l_column TEXT;
+
+	DECLARE c_column CURSOR FOR
+	SELECT column_name
+	FROM   information_schema.columns
+	JOIN   information_schema.tables USING (table_schema, table_name)
+	WHERE  table_schema = p_schema
+	AND    table_type = 'BASE TABLE'
+	AND    table_name = p_table
+	AND    column_comment = '';
+
+	OPEN c_column;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_column;
+		LOOP
+			FETCH c_column INTO l_column;
+			CALL assert(FALSE, CONCAT('assert_column_comments(', p_table, '.', l_column, ')'));
+		END LOOP;
+	END;
+
+	IF l_column IS NULL THEN
+		CALL assert(TRUE, CONCAT('assert_column_comments(', p_table, ')'));
+	END IF;
 END //
 

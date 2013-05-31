@@ -27,9 +27,9 @@ CREATE PROCEDURE pass (
 	SQL SECURITY DEFINER
 BEGIN
 	IF @_fab_expect_to_fail THEN
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
+		INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
 	ELSE
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
+		INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
 	END IF;
 END //
 

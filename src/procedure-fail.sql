@@ -27,9 +27,11 @@ CREATE PROCEDURE fail (
 	SQL SECURITY DEFINER
 BEGIN
 	IF @_fab_expect_to_fail THEN
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), FALSE);
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), FALSE)
+		ON DUPLICATE KEY UPDATE result = FALSE;
 	ELSE
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 FALSE);
+		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 FALSE)
+		ON DUPLICATE KEY UPDATE result = FALSE;
 	END IF;
 END //
 

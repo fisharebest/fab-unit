@@ -18,7 +18,7 @@
 DROP PROCEDURE IF EXISTS assert_routine_comments //
 
 CREATE PROCEDURE assert_routine_comments(
-	p_schema TEXT
+	IN p_schema TEXT
 )
 	COMMENT 'Check that all procedures and functions have comments'
 	LANGUAGE SQL

@@ -14,6 +14,8 @@
 --
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+-- NOTE: test_assert_true() is identical to this test
 
 DROP PROCEDURE IF EXISTS test_assert //
 
@@ -29,8 +31,8 @@ BEGIN
 	CALL assert(-1,   'assert(-1)'   );
 	CALL assert('1',  'assert(''1'')');
 
-	CALL expect_to_fail(); CALL assert(FALSE, 'assert(FALSE)');
-	CALL expect_to_fail(); CALL assert(0,     'assert(0)'    );
-	CALL expect_to_fail(); CALL assert('0',   'assert(''0'')');
+	CALL expect_to_fail; CALL assert(FALSE, 'assert(FALSE)');
+	CALL expect_to_fail; CALL assert(0,     'assert(0)'    );
+	CALL expect_to_fail; CALL assert('0',   'assert(''0'')');
 END //
 

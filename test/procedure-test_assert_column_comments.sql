@@ -15,16 +15,21 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert_table_comments //
+DROP PROCEDURE IF EXISTS test_assert_column_comments //
 
-CREATE PROCEDURE assert_table_comments(
-	IN p_schema TEXT
-)
-	COMMENT 'Check that all tables have comments'
+CREATE PROCEDURE test_assert_column_comments()
+	COMMENT 'Self-test: assert_column_comments()'
 	LANGUAGE SQL
-	DETERMINISTIC
+	NOT DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-END //
+	CALL assert_column_comments(DATABASE(), 'reserved_word', 'assert_column_comments(''reserved_word'')');
+	CALL assert_column_comments(DATABASE(), 'result',        'assert_column_comments(''result'')'       );
 
+	CREATE TABLE foo (bar INTEGER);
+	CALL expect_to_fail();
+	CALL assert_column_comments(DATABASE(), 'foo', 'assert_column_comments(''foo'')');
+	DROP TABLE foo;
+
+END //

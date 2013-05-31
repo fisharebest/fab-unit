@@ -15,16 +15,21 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS assert_table_comments //
+DROP PROCEDURE IF EXISTS test_assert_null //
 
-CREATE PROCEDURE assert_table_comments(
-	IN p_schema TEXT
-)
-	COMMENT 'Check that all tables have comments'
+CREATE PROCEDURE test_assert_null()
+	COMMENT 'Self-test: assert_null()'
 	LANGUAGE SQL
-	DETERMINISTIC
+	NOT DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-END //
+	CALL assert_null(NULL, 'assert_null(NULL)');
 
+	CALL expect_to_fail; CALL assert_null(FALSE, 'assert_null(FALSE)');
+	CALL expect_to_fail; CALL assert_null(TRUE,  'assert_null(TRUE)' );
+	CALL expect_to_fail; CALL assert_null(0,     'assert_null(0)'    );
+	CALL expect_to_fail; CALL assert_null(1,     'assert_null(1)'    );
+	CALL expect_to_fail; CALL assert_null('0',   'assert_null(''0'')');
+	CALL expect_to_fail; CALL assert_null('1',   'assert_null(''1'')');
+END //

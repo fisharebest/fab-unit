@@ -18,8 +18,8 @@
 DROP TABLE IF EXISTS result //
 
 CREATE TABLE result (
-	script VARCHAR(80) NOT NULL,
-	test   VARCHAR(80) NOT NULL,
-	result BOOLEAN     NOT NULL,
+	script VARCHAR(80) NOT NULL COMMENT 'Name of the test script/procedure',
+	test   VARCHAR(80) NOT NULL COMMENT 'Description of the test',
+	result BOOLEAN     NOT NULL COMMENT 'TRUE=pass, FALSE=fail',
 	PRIMARY KEY (script, test)
 ) //

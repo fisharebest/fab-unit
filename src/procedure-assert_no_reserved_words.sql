@@ -18,7 +18,7 @@
 DROP PROCEDURE IF EXISTS assert_no_reserved_words //
 
 CREATE PROCEDURE assert_no_reserved_words(
-	p_schema TEXT
+	IN p_schema TEXT
 )
 	COMMENT 'Check if any schema objects are named after reserved words'
 	LANGUAGE SQL

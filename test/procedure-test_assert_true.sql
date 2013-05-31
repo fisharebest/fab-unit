@@ -14,17 +14,25 @@
 --
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+-- NOTE: This test is identical to test_assert()
 
-DROP PROCEDURE IF EXISTS assert_table_comments //
+DROP PROCEDURE IF EXISTS test_assert_true //
 
-CREATE PROCEDURE assert_table_comments(
-	IN p_schema TEXT
-)
-	COMMENT 'Check that all tables have comments'
+CREATE PROCEDURE test_assert_true()
+	COMMENT 'Self-test: assert_true()'
 	LANGUAGE SQL
-	DETERMINISTIC
+	NOT DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
+	CALL assert(TRUE, 'assert_true(TRUE)' );
+	CALL assert(1,    'assert_true(1)'    );
+	CALL assert(-1,   'assert_true(-1)'   );
+	CALL assert('1',  'assert_true(''1'')');
+
+	CALL expect_to_fail; CALL assert_true(FALSE, 'assert_true(FALSE)');
+	CALL expect_to_fail; CALL assert_true(0,     'assert_true(0)'    );
+	CALL expect_to_fail; CALL assert_true('0',   'assert_true(''0'')');
 END //
 
