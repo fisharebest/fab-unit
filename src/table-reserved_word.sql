@@ -20,7 +20,7 @@ DROP TABLE IF EXISTS reserved_word //
 CREATE TABLE reserved_word (
 	reserved_word VARCHAR(31) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'See https://dev.mysql.com/doc/refman/5.7/en/reserved-words.html',
 	PRIMARY KEY (reserved_word)
-) //
+) COMMENT 'All MySQL reserved words' //
 
 INSERT INTO reserved_word (reserved_word) VALUES
 ('ACCESSIBLE'),

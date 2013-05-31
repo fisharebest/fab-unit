@@ -26,10 +26,6 @@ CREATE PROCEDURE pass (
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	IF @_fab_expect_to_fail THEN
-		INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
-	ELSE
-		INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
-	END IF;
+	INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message, TRUE);
 END //
 

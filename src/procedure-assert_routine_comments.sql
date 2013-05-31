@@ -20,11 +20,31 @@ DROP PROCEDURE IF EXISTS assert_routine_comments //
 CREATE PROCEDURE assert_routine_comments(
 	IN p_schema TEXT
 )
-	COMMENT 'Check that all procedures and functions have comments'
+	COMMENT 'Check that procedures and functions have comments'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
+	DECLARE l_routine TEXT;
+
+	DECLARE c_routine CURSOR FOR
+	SELECT routine_name
+	FROM   information_schema.routines
+	WHERE  routine_schema = p_schema
+	AND    routine_comment = '';
+
+	OPEN c_routine;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_routine;
+		LOOP
+			FETCH c_routine INTO l_routine;
+			CALL assert(FALSE, CONCAT('assert_routine_comments(', l_routine, ')'));
+		END LOOP;
+	END;
+
+	IF l_routine IS NULL THEN
+		CALL assert(TRUE, CONCAT('assert_routine_comments()'));
+	END IF;
 END //
 

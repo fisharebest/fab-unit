@@ -41,3 +41,4 @@ BEGIN
 	CALL expect_to_fail; CALL assert_like('foo', 'b%',  'assert_like(''foo'',''b%'')' );
 	CALL expect_to_fail; CALL assert_like('foo', '%r',  'assert_like(''foo'',''%r'')' );
 END //
+

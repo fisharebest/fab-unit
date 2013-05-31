@@ -28,6 +28,6 @@ CREATE PROCEDURE assert_not_null (
 	SQL SECURITY DEFINER
 BEGIN
 	SET p_message := COALESCE(p_message, 'assert_not_null()');
-	CALL assert(p_expression = TRUE, p_message);
+	CALL assert(p_expression IS NOT NULL, p_message);
 END //
 

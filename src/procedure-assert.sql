@@ -29,6 +29,7 @@ CREATE PROCEDURE assert (
 BEGIN
 	IF @_fab_expect_to_fail THEN
 		SET p_expression := NOT p_expression;
+		SET p_message    := CONCAT('NOT ', p_message);
 	END IF;
 	IF p_expression THEN
 		CALL pass(p_message);

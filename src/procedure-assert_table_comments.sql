@@ -18,13 +18,36 @@
 DROP PROCEDURE IF EXISTS assert_table_comments //
 
 CREATE PROCEDURE assert_table_comments(
-	IN p_schema TEXT
+	IN p_schema  TEXT,
+	IN p_table   TEXT
 )
-	COMMENT 'Check that all tables have comments'
+	COMMENT 'Check that tables have comments'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
+	DECLARE l_table TEXT;
+
+	DECLARE c_table CURSOR FOR
+	SELECT table_name
+	FROM   information_schema.tables
+	WHERE  table_schema = p_schema
+	AND    table_type = 'BASE TABLE'
+	AND    table_name = p_table
+	AND    table_comment = '';
+
+	OPEN c_table;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_table;
+		LOOP
+			FETCH c_table INTO l_table;
+			CALL assert(FALSE, CONCAT('assert_table_comments(', p_table, '.', l_table, ')'));
+		END LOOP;
+	END;
+
+	IF l_table IS NULL THEN
+		CALL assert(TRUE, CONCAT('assert_table_comments(', p_table, ')'));
+	END IF;
 END //
 

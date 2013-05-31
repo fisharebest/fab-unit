@@ -41,3 +41,4 @@ BEGIN
 	CALL expect_to_fail; CALL assert_not_like('foo', 'f%',  'assert_not_like(''foo'',''f%'')' );
 	CALL expect_to_fail; CALL assert_not_like('foo', '%o',  'assert_not_like(''foo'',''%o'')' );
 END //
+

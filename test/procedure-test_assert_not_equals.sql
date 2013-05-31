@@ -75,3 +75,4 @@ BEGIN
 
 	CALL expect_to_fail(); CALL assert_not_equals(NULL,  NULL,  'assert_not_equals(NULL,  NULL )');
 END //
+

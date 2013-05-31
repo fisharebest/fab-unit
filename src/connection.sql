@@ -30,7 +30,8 @@ SET SESSION
 	sql_warnings             := TRUE,
 	unique_checks            := TRUE //
 
-CREATE DATABASE IF NOT EXISTS fab_unit COLLATE utf8mb4_general_ci //
+DROP DATABASE IF EXISTS fab_unit;
+CREATE DATABASE fab_unit COLLATE utf8mb4_general_ci //
 
 USE fab_unit //
 

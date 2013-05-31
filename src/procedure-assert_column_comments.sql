@@ -19,10 +19,9 @@ DROP PROCEDURE IF EXISTS assert_column_comments //
 
 CREATE PROCEDURE assert_column_comments(
 	IN p_schema  TEXT,
-	IN p_table   TEXT,
-	IN p_message TEXT
+	IN p_table   TEXT
 )
-	COMMENT 'Check that all columns have comments'
+	COMMENT 'Check that all columns in a table have comments'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA

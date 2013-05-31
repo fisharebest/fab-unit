@@ -22,4 +22,5 @@ CREATE TABLE result (
 	test   VARCHAR(80) NOT NULL COMMENT 'Description of the test',
 	result BOOLEAN     NOT NULL COMMENT 'TRUE=pass, FALSE=fail',
 	PRIMARY KEY (script, test)
-) //
+) COMMENT 'Results of each test' //
+

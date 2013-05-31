@@ -15,21 +15,33 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS test_assert_null //
+DROP PROCEDURE IF EXISTS test_assert_no_reserved_words //
 
-CREATE PROCEDURE test_assert_null()
-	COMMENT 'Self-test: assert_null()'
+CREATE PROCEDURE test_assert_no_reserved_words()
+	COMMENT 'Self-test: assert_no_reserved_words()'
 	LANGUAGE SQL
 	NOT DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	CALL assert_null(NULL, 'assert_null(NULL)');
+	CALL assert_no_reserved_words(DATABASE());
 
-	CALL expect_to_fail; CALL assert_null(FALSE, 'assert_null(FALSE)');
-	CALL expect_to_fail; CALL assert_null(TRUE,  'assert_null(TRUE)' );
-	CALL expect_to_fail; CALL assert_null(0,     'assert_null(0)'    );
-	CALL expect_to_fail; CALL assert_null(1,     'assert_null(1)'    );
-	CALL expect_to_fail; CALL assert_null('0',   'assert_null(''0'')');
-	CALL expect_to_fail; CALL assert_null('1',   'assert_null(''1'')');
+	CREATE TABLE `TABLE` (bar INTEGER);
+	CALL expect_to_fail();
+	CALL assert_no_reserved_words(DATABASE());
+	DROP TABLE `TABLE`;
+
+	CREATE TABLE bar (`Column` INTEGER);
+	CALL expect_to_fail();
+	CALL assert_no_reserved_words(DATABASE());
+	DROP TABLE bar;
+
+	/* TODO: how can we create a failing test case?
+	CALL execute_immediate('CREATE PROCEDURE `PROCEDURE` BEGIN END');
+	CALL expect_to_fail();
+	CALL assert_no_reserved_words(DATABASE());
+	CALL execute_immediate('DROP PROCEDURE `PROCEDURE`');
+	*/
+
 END //
+

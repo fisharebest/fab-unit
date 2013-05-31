@@ -24,12 +24,13 @@ CREATE PROCEDURE test_assert_column_comments()
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	CALL assert_column_comments(DATABASE(), 'reserved_word', 'assert_column_comments(''reserved_word'')');
-	CALL assert_column_comments(DATABASE(), 'result',        'assert_column_comments(''result'')'       );
+	CALL assert_column_comments(DATABASE(), 'reserved_word');
+	CALL assert_column_comments(DATABASE(), 'result'       );
 
 	CREATE TABLE foo (bar INTEGER);
 	CALL expect_to_fail();
-	CALL assert_column_comments(DATABASE(), 'foo', 'assert_column_comments(''foo'')');
+	CALL assert_column_comments(DATABASE(), 'foo');
 	DROP TABLE foo;
 
 END //
+

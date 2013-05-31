@@ -30,7 +30,8 @@ SET SESSION
 	sql_warnings             := TRUE,
 	unique_checks            := TRUE //
 
-CREATE DATABASE IF NOT EXISTS fab_unit COLLATE utf8mb4_general_ci //
+DROP DATABASE IF EXISTS fab_unit;
+CREATE DATABASE fab_unit COLLATE utf8mb4_general_ci //
 
 USE fab_unit //
 
@@ -55,10 +56,9 @@ DROP PROCEDURE IF EXISTS assert_column_comments //
 
 CREATE PROCEDURE assert_column_comments(
 	IN p_schema  TEXT,
-	IN p_table   TEXT,
-	IN p_message TEXT
+	IN p_table   TEXT
 )
-	COMMENT 'Check that all columns have comments'
+	COMMENT 'Check that all columns in a table have comments'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA
@@ -276,7 +276,7 @@ BEGIN
 		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_reserved_word;
 		LOOP
 			FETCH c_reserved_word INTO l_message;
-			CALL fail(l_message);
+			CALL assert(FALSE, l_message);
 		END LOOP;
 	END;
 END //
@@ -414,7 +414,7 @@ CREATE PROCEDURE assert_not_null (
 	SQL SECURITY DEFINER
 BEGIN
 	SET p_message := COALESCE(p_message, 'assert_not_null()');
-	CALL assert(p_expression = TRUE, p_message);
+	CALL assert(p_expression IS NOT NULL, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -608,12 +608,32 @@ DROP PROCEDURE IF EXISTS assert_routine_comments //
 CREATE PROCEDURE assert_routine_comments(
 	IN p_schema TEXT
 )
-	COMMENT 'Check that all procedures and functions have comments'
+	COMMENT 'Check that procedures and functions have comments'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
+	DECLARE l_routine TEXT;
+
+	DECLARE c_routine CURSOR FOR
+	SELECT routine_name
+	FROM   information_schema.routines
+	WHERE  routine_schema = p_schema
+	AND    routine_comment = '';
+
+	OPEN c_routine;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_routine;
+		LOOP
+			FETCH c_routine INTO l_routine;
+			CALL assert(FALSE, CONCAT('assert_routine_comments(', l_routine, ')'));
+		END LOOP;
+	END;
+
+	IF l_routine IS NULL THEN
+		CALL assert(TRUE, CONCAT('assert_routine_comments()'));
+	END IF;
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -647,6 +667,7 @@ CREATE PROCEDURE assert (
 BEGIN
 	IF @_fab_expect_to_fail THEN
 		SET p_expression := NOT p_expression;
+		SET p_message    := CONCAT('NOT ', p_message);
 	END IF;
 	IF p_expression THEN
 		CALL pass(p_message);
@@ -676,14 +697,37 @@ END //
 DROP PROCEDURE IF EXISTS assert_table_comments //
 
 CREATE PROCEDURE assert_table_comments(
-	IN p_schema TEXT
+	IN p_schema  TEXT,
+	IN p_table   TEXT
 )
-	COMMENT 'Check that all tables have comments'
+	COMMENT 'Check that tables have comments'
 	LANGUAGE SQL
 	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
+	DECLARE l_table TEXT;
+
+	DECLARE c_table CURSOR FOR
+	SELECT table_name
+	FROM   information_schema.tables
+	WHERE  table_schema = p_schema
+	AND    table_type = 'BASE TABLE'
+	AND    table_name = p_table
+	AND    table_comment = '';
+
+	OPEN c_table;
+	BEGIN
+		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_table;
+		LOOP
+			FETCH c_table INTO l_table;
+			CALL assert(FALSE, CONCAT('assert_table_comments(', p_table, '.', l_table, ')'));
+		END LOOP;
+	END;
+
+	IF l_table IS NULL THEN
+		CALL assert(TRUE, CONCAT('assert_table_comments(', p_table, ')'));
+	END IF;
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -814,13 +858,8 @@ CREATE PROCEDURE fail (
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	IF @_fab_expect_to_fail THEN
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), FALSE)
-		ON DUPLICATE KEY UPDATE result = FALSE;
-	ELSE
-		INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 FALSE)
-		ON DUPLICATE KEY UPDATE result = FALSE;
-	END IF;
+	INSERT INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message, FALSE)
+	ON DUPLICATE KEY UPDATE result = FALSE;
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -851,11 +890,7 @@ CREATE PROCEDURE pass (
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	IF @_fab_expect_to_fail THEN
-		INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, CONCAT('NOT ', p_message), TRUE);
-	ELSE
-		INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message,                 TRUE);
-	END IF;
+	INSERT IGNORE INTO result (script, test, result) VALUES (@_fab_routine_comment, p_message, TRUE);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -900,7 +935,8 @@ BEGIN
 	AND    routine_name   NOT LIKE '%_tear_down';
 
 	DELETE FROM result;
-	SET @_fab_expect_to_fail := FALSE;
+	SET @_fab_expect_to_fail           := FALSE;
+	SET SESSION max_sp_recursion_depth := 255;
 
 	/*
 	CALL assert_no_reserved_words(p_schema);
@@ -955,7 +991,7 @@ DROP TABLE IF EXISTS reserved_word //
 CREATE TABLE reserved_word (
 	reserved_word VARCHAR(31) COLLATE utf8mb4_general_ci NOT NULL COMMENT 'See https://dev.mysql.com/doc/refman/5.7/en/reserved-words.html',
 	PRIMARY KEY (reserved_word)
-) //
+) COMMENT 'All MySQL reserved words' //
 
 INSERT INTO reserved_word (reserved_word) VALUES
 ('ACCESSIBLE'),
@@ -1223,7 +1259,8 @@ CREATE TABLE result (
 	test   VARCHAR(80) NOT NULL COMMENT 'Description of the test',
 	result BOOLEAN     NOT NULL COMMENT 'TRUE=pass, FALSE=fail',
 	PRIMARY KEY (script, test)
-) //
+) COMMENT 'Results of each test' //
+
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
@@ -1250,15 +1287,16 @@ CREATE PROCEDURE test_assert_column_comments()
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	CALL assert_column_comments(DATABASE(), 'reserved_word', 'assert_column_comments(''reserved_word'')');
-	CALL assert_column_comments(DATABASE(), 'result',        'assert_column_comments(''result'')'       );
+	CALL assert_column_comments(DATABASE(), 'reserved_word');
+	CALL assert_column_comments(DATABASE(), 'result'       );
 
 	CREATE TABLE foo (bar INTEGER);
 	CALL expect_to_fail();
-	CALL assert_column_comments(DATABASE(), 'foo', 'assert_column_comments(''foo'')');
+	CALL assert_column_comments(DATABASE(), 'foo');
 	DROP TABLE foo;
 
 END //
+
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
@@ -1336,6 +1374,7 @@ BEGIN
 	CALL expect_to_fail(); CALL assert_equals(0,     NULL,  'assert_equals(0, NULL)'     );
 	CALL expect_to_fail(); CALL assert_equals(1,     NULL,  'assert_equals(1, NULL)'     );
 END //
+
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
@@ -1415,6 +1454,54 @@ BEGIN
 	CALL expect_to_fail; CALL assert_like('foo', 'b%',  'assert_like(''foo'',''b%'')' );
 	CALL expect_to_fail; CALL assert_like('foo', '%r',  'assert_like(''foo'',''%r'')' );
 END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_no_reserved_words //
+
+CREATE PROCEDURE test_assert_no_reserved_words()
+	COMMENT 'Self-test: assert_no_reserved_words()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_no_reserved_words(DATABASE());
+
+	CREATE TABLE `TABLE` (bar INTEGER);
+	CALL expect_to_fail();
+	CALL assert_no_reserved_words(DATABASE());
+	DROP TABLE `TABLE`;
+
+	CREATE TABLE bar (`Column` INTEGER);
+	CALL expect_to_fail();
+	CALL assert_no_reserved_words(DATABASE());
+	DROP TABLE bar;
+
+	/* TODO: how can we create a failing test case?
+	CALL execute_immediate('CREATE PROCEDURE `PROCEDURE` BEGIN END');
+	CALL expect_to_fail();
+	CALL assert_no_reserved_words(DATABASE());
+	CALL execute_immediate('DROP PROCEDURE `PROCEDURE`');
+	*/
+
+END //
+
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
@@ -1492,6 +1579,7 @@ BEGIN
 
 	CALL expect_to_fail(); CALL assert_not_equals(NULL,  NULL,  'assert_not_equals(NULL,  NULL )');
 END //
+
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
@@ -1535,6 +1623,116 @@ BEGIN
 	CALL expect_to_fail; CALL assert_not_like('foo', 'f%',  'assert_not_like(''foo'',''f%'')' );
 	CALL expect_to_fail; CALL assert_not_like('foo', '%o',  'assert_not_like(''foo'',''%o'')' );
 END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_not_null //
+
+CREATE PROCEDURE test_assert_not_null()
+	COMMENT 'Self-test: assert_not_null()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_not_null(FALSE, 'assert_not_null(FALSE)');
+	CALL assert_not_null(TRUE,  'assert_not_null(TRUE)' );
+	CALL assert_not_null(0,     'assert_not_null(0)'    );
+	CALL assert_not_null(1,     'assert_not_null(1)'    );
+	CALL assert_not_null('0',   'assert_not_null(''0'')');
+	CALL assert_not_null('1',   'assert_not_null(''1'')');
+
+	CALL expect_to_fail; CALL assert_not_null(NULL, 'assert_not_null(NULL)');
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_null //
+
+CREATE PROCEDURE test_assert_null()
+	COMMENT 'Self-test: assert_null()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_null(NULL, 'assert_null(NULL)');
+
+	CALL expect_to_fail; CALL assert_null(FALSE, 'assert_null(FALSE)');
+	CALL expect_to_fail; CALL assert_null(TRUE,  'assert_null(TRUE)' );
+	CALL expect_to_fail; CALL assert_null(0,     'assert_null(0)'    );
+	CALL expect_to_fail; CALL assert_null(1,     'assert_null(1)'    );
+	CALL expect_to_fail; CALL assert_null('0',   'assert_null(''0'')');
+	CALL expect_to_fail; CALL assert_null('1',   'assert_null(''1'')');
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_routine_comments //
+
+CREATE PROCEDURE test_assert_routine_comments()
+	COMMENT 'Self-test: assert_routine_comments()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_routine_comments(DATABASE());
+
+	/* TODO: how can we create a failing test case?
+	CALL execute_immediate('CREATE PROCEDURE `PROCEDURE` BEGIN END');
+	CALL expect_to_fail();
+	CALL assert_no_reserved_words(DATABASE());
+	CALL execute_immediate('DROP PROCEDURE `PROCEDURE`');
+	*/
+
+END //
+
 -- fab-unit - A unit test framework for MySQL applications
 --
 -- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
@@ -1571,6 +1769,42 @@ BEGIN
 	CALL expect_to_fail; CALL assert(FALSE, 'assert(FALSE)');
 	CALL expect_to_fail; CALL assert(0,     'assert(0)'    );
 	CALL expect_to_fail; CALL assert('0',   'assert(''0'')');
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+DROP PROCEDURE IF EXISTS test_assert_table_comments //
+
+CREATE PROCEDURE test_assert_table_comments()
+	COMMENT 'Self-test: assert_table_comments()'
+	LANGUAGE SQL
+	NOT DETERMINISTIC
+	MODIFIES SQL DATA
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_table_comments(DATABASE(), 'reserved_word');
+	CALL assert_table_comments(DATABASE(), 'result'       );
+
+	CREATE TABLE foo (bar INTEGER);
+	CALL expect_to_fail();
+	CALL assert_table_comments(DATABASE(), 'foo');
+	DROP TABLE foo;
+
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -1660,38 +1894,4 @@ BEGIN
 		CALL assert(TRUE, 'All assertions have test scripts');
 	END IF;
 END //
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-DROP PROCEDURE IF EXISTS test_assert_null //
-
-CREATE PROCEDURE test_assert_null()
-	COMMENT 'Self-test: assert_null()'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
-	SQL SECURITY DEFINER
-BEGIN
-	CALL assert_null(NULL, 'assert_null(NULL)');
-
-	CALL expect_to_fail; CALL assert_null(FALSE, 'assert_null(FALSE)');
-	CALL expect_to_fail; CALL assert_null(TRUE,  'assert_null(TRUE)' );
-	CALL expect_to_fail; CALL assert_null(0,     'assert_null(0)'    );
-	CALL expect_to_fail; CALL assert_null(1,     'assert_null(1)'    );
-	CALL expect_to_fail; CALL assert_null('0',   'assert_null(''0'')');
-	CALL expect_to_fail; CALL assert_null('1',   'assert_null(''1'')');
-END //

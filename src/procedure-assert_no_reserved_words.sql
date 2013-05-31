@@ -49,7 +49,7 @@ BEGIN
 		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_reserved_word;
 		LOOP
 			FETCH c_reserved_word INTO l_message;
-			CALL fail(l_message);
+			CALL assert(FALSE, l_message);
 		END LOOP;
 	END;
 END //

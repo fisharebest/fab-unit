@@ -40,7 +40,8 @@ BEGIN
 	AND    routine_name   NOT LIKE '%_tear_down';
 
 	DELETE FROM result;
-	SET @_fab_expect_to_fail := FALSE;
+	SET @_fab_expect_to_fail           := FALSE;
+	SET SESSION max_sp_recursion_depth := 255;
 
 	/*
 	CALL assert_no_reserved_words(p_schema);
