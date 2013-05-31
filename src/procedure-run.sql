@@ -56,7 +56,18 @@ BEGIN
 		END LOOP;
 	END;
 
-	SELECT script, test, CASE result WHEN TRUE THEN 'pass' ELSE 'fail' END AS result FROM result;
+	SELECT
+		script,
+		CASE WHEN MIN(result)
+			THEN 'pass'
+			ELSE 'fail'
+		END AS result,
+		CASE WHEN MIN(result)
+			THEN CONCAT(COUNT(result), CASE WHEN COUNT(result)=1 THEN ' test' ELSE ' tests' END)
+			ELSE GROUP_CONCAT(CASE WHEN result THEN NULL ELSE test END SEPARATOR '\n')
+		END AS details
+	FROM result
+	GROUP BY script;
 
 END //
 
