@@ -18,10 +18,10 @@
 DROP PROCEDURE IF EXISTS test_assert_no_reserved_words //
 
 CREATE PROCEDURE test_assert_no_reserved_words()
-	COMMENT 'Self-test: assert_no_reserved_words()'
+	COMMENT 'Test: assert_no_reserved_words()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_no_reserved_words(DATABASE());

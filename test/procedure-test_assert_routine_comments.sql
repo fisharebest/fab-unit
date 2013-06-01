@@ -18,10 +18,10 @@
 DROP PROCEDURE IF EXISTS test_assert_routine_comments //
 
 CREATE PROCEDURE test_assert_routine_comments()
-	COMMENT 'Self-test: assert_routine_comments()'
+	COMMENT 'Test: assert_routine_comments()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_routine_comments(DATABASE());

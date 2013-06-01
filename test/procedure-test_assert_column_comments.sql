@@ -18,10 +18,10 @@
 DROP PROCEDURE IF EXISTS test_assert_column_comments //
 
 CREATE PROCEDURE test_assert_column_comments()
-	COMMENT 'Self-test: assert_column_comments()'
+	COMMENT 'Test: assert_column_comments()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_column_comments(DATABASE(), 'reserved_word');

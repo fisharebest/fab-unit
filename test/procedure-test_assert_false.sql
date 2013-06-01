@@ -18,10 +18,10 @@
 DROP PROCEDURE IF EXISTS test_assert_false //
 
 CREATE PROCEDURE test_assert_false()
-	COMMENT 'Self-test: assert_false()'
+	COMMENT 'Test: assert_false()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_false(FALSE, 'assert_false(FALSE)');

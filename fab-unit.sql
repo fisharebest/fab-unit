@@ -115,7 +115,7 @@ CREATE PROCEDURE assert_equals (
 )
 	COMMENT 'Assert that two values are equal'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -148,7 +148,7 @@ CREATE PROCEDURE assert_false (
 )
 	COMMENT 'Assert that a value equates to FALSE'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -183,7 +183,7 @@ CREATE PROCEDURE assert_like_escape (
 )
 	COMMENT 'Assert that one expression is like another'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -217,7 +217,7 @@ CREATE PROCEDURE assert_like (
 )
 	COMMENT 'Assert that one expression is like another'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -307,7 +307,7 @@ CREATE PROCEDURE assert_not_equals (
 )
 	COMMENT 'Assert that two values are not equal'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -342,7 +342,7 @@ CREATE PROCEDURE assert_not_like_escape (
 )
 	COMMENT 'Assert that one expression is not like another'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -376,7 +376,7 @@ CREATE PROCEDURE assert_not_like (
 )
 	COMMENT 'Assert that one expression is not like another'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -409,46 +409,12 @@ CREATE PROCEDURE assert_not_null (
 )
 	COMMENT 'Assert that a value does not equate to NULL'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	SET p_message := COALESCE(p_message, 'assert_not_null()');
 	CALL assert(p_expression IS NOT NULL, p_message);
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert_not_regexp_binary //
-
-CREATE PROCEDURE assert_not_regexp_binary (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
-	IN p_message     TEXT
-)
-	COMMENT 'Assert that an expression does not match a case-sensitive regular expression'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	CONTAINS SQL
-	SQL SECURITY DEFINER
-BEGIN
-	SET p_message := COALESCE(p_message, 'assert_not_regexp_binary()');
-	CALL assert(p_expression1 NOT REGEXP BINARY p_expression2, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -477,7 +443,7 @@ CREATE PROCEDURE assert_not_regexp (
 )
 	COMMENT 'Assert that an expression does not match a case-insensitive regular expression'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -510,46 +476,12 @@ CREATE PROCEDURE assert_null (
 )
 	COMMENT 'Assert that a value equates to NULL'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	SET p_message := COALESCE(p_message, 'assert_null()');
 	CALL assert(p_expression IS NULL, p_message);
-END //
-
--- fab-unit - A unit test framework for MySQL applications
---
--- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
---
--- This program is free software: you can redistribute it and/or modify
--- it under the terms of the GNU General Public License as published by
--- the Free Software Foundation, either version 3 of the License, or
--- (at your option) any later version.
---
--- This program is distributed in the hope that it will be useful,
--- but WITHOUT ANY WARRANTY; without even the implied warranty of
--- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
--- GNU General Public License for more details.
---
--- You should have received a copy of the GNU General Public License
--- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
-DROP PROCEDURE IF EXISTS assert_regexp_binary //
-
-CREATE PROCEDURE assert_regexp_binary (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
-	IN p_message     TEXT
-)
-	COMMENT 'Assert that an expression matches a case-sensitive regular expression'
-	LANGUAGE SQL
-	NOT DETERMINISTIC
-	CONTAINS SQL
-	SQL SECURITY DEFINER
-BEGIN
-	SET p_message := COALESCE(p_message, 'assert_regexp()');
-	CALL assert(p_expression1 NOT REGEXP BINARY p_expression2, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -578,12 +510,12 @@ CREATE PROCEDURE assert_regexp (
 )
 	COMMENT 'Assert that an expression matches a case-insensitive regular expression'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	SET p_message := COALESCE(p_message, 'assert_regexp()');
-	CALL assert(p_expression1 NOT REGEXP p_expression2, p_message);
+	CALL assert(p_expression1 REGEXP p_expression2, p_message);
 END //
 
 -- fab-unit - A unit test framework for MySQL applications
@@ -755,7 +687,7 @@ CREATE PROCEDURE assert_true (
 )
 	COMMENT 'Assert that a value equates to TRUE'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -823,7 +755,7 @@ DROP PROCEDURE IF EXISTS expect_to_fail //
 CREATE PROCEDURE expect_to_fail()
 	COMMENT 'Expect the next test to fail, rather than pass'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
@@ -1281,10 +1213,10 @@ CREATE TABLE result (
 DROP PROCEDURE IF EXISTS test_assert_column_comments //
 
 CREATE PROCEDURE test_assert_column_comments()
-	COMMENT 'Self-test: assert_column_comments()'
+	COMMENT 'Test: assert_column_comments()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_column_comments(DATABASE(), 'reserved_word');
@@ -1317,10 +1249,10 @@ END //
 DROP PROCEDURE IF EXISTS test_assert_equals //
 
 CREATE PROCEDURE test_assert_equals()
-	COMMENT 'Self-test: assert_equals()'
+	COMMENT 'Test: assert_equals()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_equals(TRUE,  TRUE,  'assert_equals(TRUE, TRUE)'  );
@@ -1395,10 +1327,10 @@ END //
 DROP PROCEDURE IF EXISTS test_assert_false //
 
 CREATE PROCEDURE test_assert_false()
-	COMMENT 'Self-test: assert_false()'
+	COMMENT 'Test: assert_false()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_false(FALSE, 'assert_false(FALSE)');
@@ -1428,13 +1360,64 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+DROP PROCEDURE IF EXISTS test_assert_like_escape //
+
+CREATE PROCEDURE test_assert_like_escape()
+	COMMENT 'Test: assert_like_escape()'
+	LANGUAGE SQL
+	DETERMINISTIC
+	CONTAINS SQL
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_like_escape('foo', 'foo',   '!', 'assert_like_escape(''foo'',''foo'', ''!'')'  );
+	CALL assert_like_escape('foo', 'fo_',   '!', 'assert_like_escape(''foo'',''fo_'', ''!'')'  );
+	CALL assert_like_escape('foo', 'f_o',   '!', 'assert_like_escape(''foo'',''f_o'', ''!'')'  );
+	CALL assert_like_escape('foo', '_oo',   '!', 'assert_like_escape(''foo'',''_oo'', ''!'')'  );
+	CALL assert_like_escape('foo', '_o_',   '!', 'assert_like_escape(''foo'',''_o_'', ''!'')'  );
+	CALL assert_like_escape('foo', '%',     '!', 'assert_like_escape(''foo'',''%'', ''!'')'    );
+	CALL assert_like_escape('foo', 'f%',    '!', 'assert_like_escape(''foo'',''f%'', ''!'')'   );
+	CALL assert_like_escape('foo', '%o',    '!', 'assert_like_escape(''foo'',''%o'', ''!'')'   );
+
+	CALL assert_like_escape('foo', '!foo',  '!', 'assert_like_escape(''foo'',''!foo'', ''!'')' );
+	CALL assert_like_escape('foo', '!fo_',  '!', 'assert_like_escape(''foo'',''!fo_'', ''!'')' );
+	CALL assert_like_escape('foo', 'f_!o',  '!', 'assert_like_escape(''foo'',''f_!o'', ''!'')' );
+	CALL assert_like_escape('foo', '_!o!o', '!', 'assert_like_escape(''foo'',''_!o!o'', ''!'')');
+	CALL assert_like_escape('foo', '_!o_',  '!', 'assert_like_escape(''foo'',''_!o_'', ''!'')' );
+	CALL assert_like_escape('foo', '!f%',   '!', 'assert_like_escape(''foo'',''!f%'', ''!'')'  );
+	CALL assert_like_escape('foo', '%!o',   '!', 'assert_like_escape(''foo'',''%!o'', ''!'')'  );
+
+	CALL expect_to_fail; CALL assert_like_escape('foo', 'fo!_', '!', 'assert_like_escape(''foo'',''bo!_'', ''!'')' );
+	CALL expect_to_fail; CALL assert_like_escape('foo', 'f!_o', '!', 'assert_like_escape(''foo'',''b!_o'', ''!'')' );
+	CALL expect_to_fail; CALL assert_like_escape('foo', '!_or', '!', 'assert_like_escape(''foo'',''!_oo'', ''!'')' );
+	CALL expect_to_fail; CALL assert_like_escape('foo', '_o!_', '!', 'assert_like_escape(''foo'',''!_o!_'', ''!'')');
+	CALL expect_to_fail; CALL assert_like_escape('foo', 'f!%',  '!', 'assert_like_escape(''foo'',''b!%'', ''!'')'  );
+	CALL expect_to_fail; CALL assert_like_escape('foo', '!%o',  '!', 'assert_like_escape(''foo'',''!%o'', ''!'')'  );
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 DROP PROCEDURE IF EXISTS test_assert_like //
 
 CREATE PROCEDURE test_assert_like()
-	COMMENT 'Self-test: assert_like()'
+	COMMENT 'Test: assert_like()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_like('foo', 'foo', 'assert_like(''foo'',''foo'')');
@@ -1475,10 +1458,10 @@ END //
 DROP PROCEDURE IF EXISTS test_assert_no_reserved_words //
 
 CREATE PROCEDURE test_assert_no_reserved_words()
-	COMMENT 'Self-test: assert_no_reserved_words()'
+	COMMENT 'Test: assert_no_reserved_words()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_no_reserved_words(DATABASE());
@@ -1522,10 +1505,10 @@ END //
 DROP PROCEDURE IF EXISTS test_assert_not_equals //
 
 CREATE PROCEDURE test_assert_not_equals()
-	COMMENT 'Self-test: assert_not_equals()'
+	COMMENT 'Test: assert_not_equals()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_not_equals(FALSE, TRUE,  'assert_not_equals(FALSE, TRUE )');
@@ -1597,13 +1580,63 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+DROP PROCEDURE IF EXISTS test_assert_not_like_escape //
+
+CREATE PROCEDURE test_assert_not_like_escape()
+	COMMENT 'Test: assert_not_like_escape()'
+	LANGUAGE SQL
+	DETERMINISTIC
+	CONTAINS SQL
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_not_like_escape('foo', 'bar',   '!', 'assert_not_like_escape(''foo'',''bar'', ''!'')');
+	CALL assert_not_like_escape('foo', 'ba_',   '!', 'assert_not_like_escape(''foo'',''ba_'', ''!'')');
+	CALL assert_not_like_escape('foo', 'b_r',   '!', 'assert_not_like_escape(''foo'',''b_r'', ''!'')');
+	CALL assert_not_like_escape('foo', '_ar',   '!', 'assert_not_like_escape(''foo'',''_ar'', ''!'')');
+	CALL assert_not_like_escape('foo', '_a_',   '!', 'assert_not_like_escape(''foo'',''_a_'', ''!'')');
+	CALL assert_not_like_escape('foo', 'b%',    '!', 'assert_not_like_escape(''foo'',''b%'', ''!'')' );
+	CALL assert_not_like_escape('foo', '%r',    '!', 'assert_not_like_escape(''foo'',''%r'', ''!'')' );
+
+	CALL assert_not_like_escape('foo', '!bar',  '!', 'assert_not_like_escape(''foo'',''bar'', ''!'')');
+	CALL assert_not_like_escape('foo', '!ba_',  '!', 'assert_not_like_escape(''foo'',''ba_'', ''!'')');
+	CALL assert_not_like_escape('foo', 'b_!r',  '!', 'assert_not_like_escape(''foo'',''b_r'', ''!'')');
+	CALL assert_not_like_escape('foo', '_!a!r', '!', 'assert_not_like_escape(''foo'',''_ar'', ''!'')');
+	CALL assert_not_like_escape('foo', '_!a_',  '!', 'assert_not_like_escape(''foo'',''_a_'', ''!'')');
+	CALL assert_not_like_escape('foo', '!b%',   '!', 'assert_not_like_escape(''foo'',''b%'', ''!'')' );
+	CALL assert_not_like_escape('foo', '%!r',   '!', 'assert_not_like_escape(''foo'',''%r'', ''!'')' );
+
+	CALL expect_to_fail; CALL assert_not_like_escape('fo_', 'fo!_',  '!', 'assert_not_like_escape(''fo_'',''fo!_'', ''!'')' );
+	CALL expect_to_fail; CALL assert_not_like_escape('f_o', 'f!_o',  '!', 'assert_not_like_escape(''f_o'',''f!_o'', ''!'')' );
+	CALL expect_to_fail; CALL assert_not_like_escape('_oo', '!_oo',  '!', 'assert_not_like_escape(''_oo'',''!_oo'', ''!'')' );
+	CALL expect_to_fail; CALL assert_not_like_escape('_o_', '!_o!_', '!', 'assert_not_like_escape(''_o_'',''!_o!_'', ''!'')');
+	CALL expect_to_fail; CALL assert_not_like_escape('f%',  'f!%',   '!', 'assert_not_like_escape(''f%'',''f!%'', ''!'')'   );
+	CALL expect_to_fail; CALL assert_not_like_escape('%o',  '!%o',   '!', 'assert_not_like_escape(''%o'',''!%o'', ''!'')'   );
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 DROP PROCEDURE IF EXISTS test_assert_not_like //
 
 CREATE PROCEDURE test_assert_not_like()
-	COMMENT 'Self-test: assert_not_like()'
+	COMMENT 'Test: assert_not_like()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_not_like('foo', 'bar', 'assert_not_like(''foo'',''bar'')');
@@ -1644,10 +1677,10 @@ END //
 DROP PROCEDURE IF EXISTS test_assert_not_null //
 
 CREATE PROCEDURE test_assert_not_null()
-	COMMENT 'Self-test: assert_not_null()'
+	COMMENT 'Test: assert_not_null()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_not_null(FALSE, 'assert_not_null(FALSE)');
@@ -1677,13 +1710,68 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+DROP PROCEDURE IF EXISTS test_assert_not_regexp //
+
+CREATE PROCEDURE test_assert_not_regexp()
+	COMMENT 'Test: assert_not_regexp()'
+	LANGUAGE SQL
+	DETERMINISTIC
+	CONTAINS SQL
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_not_regexp('FOO', 'foo', 'assert_not_regexp(''FOO'',''foo'')');
+	CALL assert_not_regexp('FOO', 'foo', 'assert_not_regexp(''FOO'',''foo'')');
+	CALL assert_not_regexp('FOO', 'fo.', 'assert_not_regexp(''FOO'',''fo.'')');
+	CALL assert_not_regexp('FOO', 'f.o', 'assert_not_regexp(''FOO'',''f.o'')');
+	CALL assert_not_regexp('FOO', '.oo', 'assert_not_regexp(''FOO'',''.oo'')');
+	CALL assert_not_regexp('FOO', '.o+', 'assert_not_regexp(''FOO'',''.o+'')');
+	CALL assert_not_regexp('FOO', 'fo*', 'assert_not_regexp(''FOO'',''fo*'')');
+	CALL assert_not_regexp('FOO', '.*o', 'assert_not_regexp(''FOO'',''.*o'')');
+
+	CALL assert_not_regexp('bar', 'foo', 'assert_not_regexp(''bar'',''foo'')');
+	CALL assert_not_regexp('bar', 'foo', 'assert_not_regexp(''bar'',''foo'')');
+	CALL assert_not_regexp('bar', 'fo.', 'assert_not_regexp(''bar'',''fo.'')');
+	CALL assert_not_regexp('bar', 'f.o', 'assert_not_regexp(''bar'',''f.o'')');
+	CALL assert_not_regexp('bar', '.oo', 'assert_not_regexp(''bar'',''.oo'')');
+	CALL assert_not_regexp('bar', '.o+', 'assert_not_regexp(''bar'',''.o+'')');
+	CALL assert_not_regexp('bar', 'fo*', 'assert_not_regexp(''bar'',''fo*'')');
+	CALL assert_not_regexp('bar', '.*o', 'assert_not_regexp(''bar'',''.*o'')');
+
+	CALL expect_to_fail; CALL assert_not_regexp('foo', 'foo', 'assert_not_regexp(''foo'',''foo'')');
+	CALL expect_to_fail; CALL assert_not_regexp('foo', 'foo', 'assert_not_regexp(''foo'',''foo'')');
+	CALL expect_to_fail; CALL assert_not_regexp('foo', 'fo.', 'assert_not_regexp(''foo'',''fo.'')');
+	CALL expect_to_fail; CALL assert_not_regexp('foo', 'f.o', 'assert_not_regexp(''foo'',''f.o'')');
+	CALL expect_to_fail; CALL assert_not_regexp('foo', '.oo', 'assert_not_regexp(''foo'',''.oo'')');
+	CALL expect_to_fail; CALL assert_not_regexp('foo', '.o+', 'assert_not_regexp(''foo'',''.o+'')');
+	CALL expect_to_fail; CALL assert_not_regexp('foo', '.*',  'assert_not_regexp(''foo'',''.*'')' );
+	CALL expect_to_fail; CALL assert_not_regexp('foo', 'fo*', 'assert_not_regexp(''foo'',''fo*'')');
+	CALL expect_to_fail; CALL assert_not_regexp('foo', '.*o', 'assert_not_regexp(''foo'',''.*o'')');
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 DROP PROCEDURE IF EXISTS test_assert_null //
 
 CREATE PROCEDURE test_assert_null()
-	COMMENT 'Self-test: assert_null()'
+	COMMENT 'Test: assert_null()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_null(NULL, 'assert_null(NULL)');
@@ -1713,13 +1801,68 @@ END //
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+DROP PROCEDURE IF EXISTS test_assert_regexp //
+
+CREATE PROCEDURE test_assert_regexp()
+	COMMENT 'Test: assert_regexp()'
+	LANGUAGE SQL
+	DETERMINISTIC
+	CONTAINS SQL
+	SQL SECURITY DEFINER
+BEGIN
+	CALL assert_regexp('foo', 'foo', 'assert_regexp(''foo'',''foo'')');
+	CALL assert_regexp('foo', 'foo', 'assert_regexp(''foo'',''foo'')');
+	CALL assert_regexp('foo', 'fo.', 'assert_regexp(''foo'',''fo.'')');
+	CALL assert_regexp('foo', 'f.o', 'assert_regexp(''foo'',''f.o'')');
+	CALL assert_regexp('foo', '.oo', 'assert_regexp(''foo'',''.oo'')');
+	CALL assert_regexp('foo', '.o+', 'assert_regexp(''foo'',''.o+'')');
+	CALL assert_regexp('foo', '.*',  'assert_regexp(''foo'',''.*'')' );
+	CALL assert_regexp('foo', 'fo*', 'assert_regexp(''foo'',''fo*'')');
+	CALL assert_regexp('foo', '.*o', 'assert_regexp(''foo'',''.*o'')');
+
+	CALL expect_to_fail; CALL assert_regexp('FOO', 'foo', 'assert_regexp(''FOO'',''foo'')');
+	CALL expect_to_fail; CALL assert_regexp('FOO', 'foo', 'assert_regexp(''FOO'',''foo'')');
+	CALL expect_to_fail; CALL assert_regexp('FOO', 'fo.', 'assert_regexp(''FOO'',''fo.'')');
+	CALL expect_to_fail; CALL assert_regexp('FOO', 'f.o', 'assert_regexp(''FOO'',''f.o'')');
+	CALL expect_to_fail; CALL assert_regexp('FOO', '.oo', 'assert_regexp(''FOO'',''.oo'')');
+	CALL expect_to_fail; CALL assert_regexp('FOO', '.o+', 'assert_regexp(''FOO'',''.o+'')');
+	CALL expect_to_fail; CALL assert_regexp('FOO', 'fo*', 'assert_regexp(''FOO'',''fo*'')');
+	CALL expect_to_fail; CALL assert_regexp('FOO', '.*o', 'assert_regexp(''FOO'',''.*o'')');
+
+	CALL expect_to_fail; CALL assert_regexp('bar', 'foo', 'assert_regexp(''bar'',''foo'')');
+	CALL expect_to_fail; CALL assert_regexp('bar', 'foo', 'assert_regexp(''bar'',''foo'')');
+	CALL expect_to_fail; CALL assert_regexp('bar', 'fo.', 'assert_regexp(''bar'',''fo.'')');
+	CALL expect_to_fail; CALL assert_regexp('bar', 'f.o', 'assert_regexp(''bar'',''f.o'')');
+	CALL expect_to_fail; CALL assert_regexp('bar', '.oo', 'assert_regexp(''bar'',''.oo'')');
+	CALL expect_to_fail; CALL assert_regexp('bar', '.o+', 'assert_regexp(''bar'',''.o+'')');
+	CALL expect_to_fail; CALL assert_regexp('bar', 'fo*', 'assert_regexp(''bar'',''fo*'')');
+	CALL expect_to_fail; CALL assert_regexp('bar', '.*o', 'assert_regexp(''bar'',''.*o'')');
+END //
+
+-- fab-unit - A unit test framework for MySQL applications
+--
+-- Copyright (c) 2013 Greg Roach, fisharebest@gmail.com
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+--
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 DROP PROCEDURE IF EXISTS test_assert_routine_comments //
 
 CREATE PROCEDURE test_assert_routine_comments()
-	COMMENT 'Self-test: assert_routine_comments()'
+	COMMENT 'Test: assert_routine_comments()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_routine_comments(DATABASE());
@@ -1755,10 +1898,10 @@ END //
 DROP PROCEDURE IF EXISTS test_assert //
 
 CREATE PROCEDURE test_assert()
-	COMMENT 'Self-test: assert()'
+	COMMENT 'Test: assert()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert(TRUE, 'assert(TRUE)' );
@@ -1791,9 +1934,9 @@ END //
 DROP PROCEDURE IF EXISTS test_assert_table_comments //
 
 CREATE PROCEDURE test_assert_table_comments()
-	COMMENT 'Self-test: assert_table_comments()'
+	COMMENT 'Test: assert_table_comments()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
@@ -1829,10 +1972,10 @@ END //
 DROP PROCEDURE IF EXISTS test_assert_true //
 
 CREATE PROCEDURE test_assert_true()
-	COMMENT 'Self-test: assert_true()'
+	COMMENT 'Test: assert_true()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert(TRUE, 'assert_true(TRUE)' );
@@ -1865,10 +2008,10 @@ END //
 DROP PROCEDURE IF EXISTS test_coverage //
 
 CREATE PROCEDURE test_coverage()
-	COMMENT 'Self-test: test_coverage()'
+	COMMENT 'Check test coverage'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	READS SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
 	DECLARE l_routine TEXT;

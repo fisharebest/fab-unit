@@ -24,7 +24,7 @@ CREATE PROCEDURE assert_not_like (
 )
 	COMMENT 'Assert that one expression is not like another'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN

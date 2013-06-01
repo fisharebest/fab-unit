@@ -24,7 +24,7 @@ CREATE PROCEDURE assert_not_regexp (
 )
 	COMMENT 'Assert that an expression does not match a case-insensitive regular expression'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN

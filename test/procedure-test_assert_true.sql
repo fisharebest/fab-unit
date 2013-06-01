@@ -20,10 +20,10 @@
 DROP PROCEDURE IF EXISTS test_assert_true //
 
 CREATE PROCEDURE test_assert_true()
-	COMMENT 'Self-test: assert_true()'
+	COMMENT 'Test: assert_true()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert(TRUE, 'assert_true(TRUE)' );

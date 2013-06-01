@@ -25,7 +25,7 @@ CREATE PROCEDURE assert_like_escape (
 )
 	COMMENT 'Assert that one expression is like another'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN

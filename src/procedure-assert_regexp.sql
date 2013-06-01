@@ -24,11 +24,11 @@ CREATE PROCEDURE assert_regexp (
 )
 	COMMENT 'Assert that an expression matches a case-insensitive regular expression'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	SET p_message := COALESCE(p_message, 'assert_regexp()');
-	CALL assert(p_expression1 NOT REGEXP p_expression2, p_message);
+	CALL assert(p_expression1 REGEXP p_expression2, p_message);
 END //
 

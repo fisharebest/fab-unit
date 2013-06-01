@@ -18,10 +18,10 @@
 DROP PROCEDURE IF EXISTS test_assert_not_like //
 
 CREATE PROCEDURE test_assert_not_like()
-	COMMENT 'Self-test: assert_not_like()'
+	COMMENT 'Test: assert_not_like()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_not_like('foo', 'bar', 'assert_not_like(''foo'',''bar'')');

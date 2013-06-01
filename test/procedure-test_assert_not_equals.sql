@@ -18,10 +18,10 @@
 DROP PROCEDURE IF EXISTS test_assert_not_equals //
 
 CREATE PROCEDURE test_assert_not_equals()
-	COMMENT 'Self-test: assert_not_equals()'
+	COMMENT 'Test: assert_not_equals()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_not_equals(FALSE, TRUE,  'assert_not_equals(FALSE, TRUE )');

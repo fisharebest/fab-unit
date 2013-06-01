@@ -18,9 +18,9 @@
 DROP PROCEDURE IF EXISTS test_assert_table_comments //
 
 CREATE PROCEDURE test_assert_table_comments()
-	COMMENT 'Self-test: assert_table_comments()'
+	COMMENT 'Test: assert_table_comments()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN

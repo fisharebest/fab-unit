@@ -23,7 +23,7 @@ DROP PROCEDURE IF EXISTS expect_to_fail //
 CREATE PROCEDURE expect_to_fail()
 	COMMENT 'Expect the next test to fail, rather than pass'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
+	DETERMINISTIC
 	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN

@@ -18,10 +18,10 @@
 DROP PROCEDURE IF EXISTS test_assert_not_null //
 
 CREATE PROCEDURE test_assert_not_null()
-	COMMENT 'Self-test: assert_not_null()'
+	COMMENT 'Test: assert_not_null()'
 	LANGUAGE SQL
-	NOT DETERMINISTIC
-	MODIFIES SQL DATA
+	DETERMINISTIC
+	CONTAINS SQL
 	SQL SECURITY DEFINER
 BEGIN
 	CALL assert_not_null(FALSE, 'assert_not_null(FALSE)');
