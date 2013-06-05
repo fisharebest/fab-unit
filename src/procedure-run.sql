@@ -27,8 +27,9 @@ CREATE PROCEDURE run (
 	MODIFIES SQL DATA
 	SQL SECURITY DEFINER
 BEGIN
-	DECLARE l_routine_name    TEXT;
-	DECLARE l_routine_comment TEXT;
+	DECLARE l_start_time        TIMESTAMP DEFAULT NOW();
+	DECLARE l_routine_name      TEXT;
+	DECLARE l_routine_comment   TEXT;
 
 	DECLARE c_test_case CURSOR FOR
 	SELECT routine_name, routine_comment
@@ -39,23 +40,60 @@ BEGIN
 	AND    routine_name   NOT LIKE '%_set_up'
 	AND    routine_name   NOT LIKE '%_tear_down';
 
+	DECLARE c_set_up CURSOR FOR
+	SELECT routine_name
+	FROM   information_schema.routines
+	WHERE  routine_schema = p_schema
+	AND    routine_type = 'PROCEDURE'
+	AND    routine_name LIKE '%_set_up'
+	AND    LOCATE(LEFT(routine_name, LENGTH(routine_name) - 7), l_routine_name) = 1
+	ORDER BY LENGTH(routine_name);
+
+	DECLARE c_tear_down CURSOR FOR
+	SELECT routine_name
+	FROM   information_schema.routines
+	WHERE  routine_schema = p_schema
+	AND    routine_type = 'PROCEDURE'
+	AND    routine_name LIKE '%_tear_down'
+	AND    LOCATE(LEFT(routine_name, LENGTH(routine_name) - 10), l_routine_name) = 1
+	ORDER BY LENGTH(routine_name) DESC;
+
 	DELETE FROM result;
 	SET @_fab_expect_to_fail           := FALSE;
-	SET SESSION max_sp_recursion_depth := 255;
-
-	/*
-	CALL assert_no_reserved_words(p_schema);
-	CALL assert_table_comments   (p_schema);
-	CALL assert_column_comments  (p_schema, NULL);
-	*/
 
 	OPEN c_test_case;
 	BEGIN
 		DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_test_case;
 		LOOP
 			FETCH c_test_case INTO l_routine_name, l_routine_comment;
+			
+			-- Remember the routine’s name - we’ll need it to log the results
 			SET @_fab_routine_comment := l_routine_comment;
+
+			-- Run any set-up scripts
+			OPEN c_set_up;
+			BEGIN
+				DECLARE l_set_up_routine TEXT;
+				DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_set_up;
+				LOOP
+					FETCH c_set_up INTO l_set_up_routine;
+					CALL execute_immediate(CONCAT('CALL ', p_schema, '.', l_set_up_routine));
+				END LOOP;
+			END;
+			-- Run the test script
 			CALL execute_immediate(CONCAT('CALL ', p_schema, '.', l_routine_name));
+
+			-- Run any tear-down scripts
+			OPEN c_tear_down;
+			BEGIN
+				DECLARE l_tear_down_routine TEXT;
+				DECLARE EXIT HANDLER FOR NOT FOUND CLOSE c_tear_down;
+				LOOP
+					FETCH c_tear_down INTO l_tear_down_routine;
+					CALL execute_immediate(CONCAT('CALL ', p_schema, '.', l_tear_down_routine));
+				END LOOP;
+			END;
+
 		END LOOP;
 	END;
 
@@ -72,5 +110,10 @@ BEGIN
 	FROM result
 	GROUP BY script;
 
+	SELECT
+		CASE WHEN MIN(result) THEN 'pass' ELSE 'fail' END AS result,
+		COUNT(*) AS tests,
+		NOW() - l_start_time AS seconds
+	FROM result;
 END //
 

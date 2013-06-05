@@ -21,6 +21,6 @@ fab-unit.sql: src/connection.sql src/procedure-*.sql src/table-*.sql test/*.sql
 clean:
 	rm -f fab-unit.sql
 
-self-test: clean fab-unit.sql
+test: clean fab-unit.sql
 	mysql                     --execute "SOURCE fab-unit.sql"
 	mysql --database fab_unit --execute "CALL fab_unit.run(DATABASE(), NULL)"
