@@ -22,5 +22,5 @@ clean:
 	rm -f fab-unit.sql
 
 test: fab-unit.sql
-	mysql                     --execute "SOURCE fab-unit.sql"
-	mysql --database fab_unit --execute "CALL fab_unit.run(DATABASE(), NULL)"
+	mysql --execute "SOURCE fab-unit.sql"
+	mysql --execute "CALL fab_unit.run('fab_unit', 'test_%')"
