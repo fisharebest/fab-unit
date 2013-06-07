@@ -21,6 +21,6 @@ fab-unit.sql: src/connection.sql src/procedure-*.sql src/table-*.sql test/*.sql
 clean:
 	rm -f fab-unit.sql
 
-test: fab-unit.sql
+test.log: fab-unit.sql
 	mysql --execute "SOURCE fab-unit.sql"
-	mysql --execute "CALL fab_unit.run('fab_unit', 'test_%')"
+	script -q -c "mysql --execute \"CALL fab_unit.run('fab_unit', 'test_%')\" " | tee $@
