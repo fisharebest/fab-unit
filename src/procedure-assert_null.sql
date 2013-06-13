@@ -18,7 +18,7 @@
 DROP PROCEDURE IF EXISTS assert_null //
 
 CREATE PROCEDURE assert_null (
-	IN p_expression BOOLEAN,
+	IN p_expression LONGBLOB,
 	IN p_message    TEXT
 )
 	COMMENT 'Assert that a value equates to NULL'

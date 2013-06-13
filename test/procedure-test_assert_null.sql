@@ -32,5 +32,6 @@ BEGIN
 	CALL expect_to_fail; CALL assert_null(1,     'assert_null(1)'    );
 	CALL expect_to_fail; CALL assert_null('0',   'assert_null(''0'')');
 	CALL expect_to_fail; CALL assert_null('1',   'assert_null(''1'')');
+	CALL expect_to_fail; CALL assert_null(REPEAT('X', 256*256*256*2), 'assert_not_null(<LONGTEXT>)');
 END //
 

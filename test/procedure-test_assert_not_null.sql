@@ -30,7 +30,9 @@ BEGIN
 	CALL assert_not_null(1,     'assert_not_null(1)'    );
 	CALL assert_not_null('0',   'assert_not_null(''0'')');
 	CALL assert_not_null('1',   'assert_not_null(''1'')');
+	CALL assert_not_null(REPEAT('X', 256*256*256*2), 'assert_not_null(<LONGTEXT>)');
 
-	CALL expect_to_fail; CALL assert_not_null(NULL, 'assert_not_null(NULL)');
+	CALL expect_to_fail;
+	CALL assert_not_null(NULL, 'assert_not_null(NULL)');
 END //
 
