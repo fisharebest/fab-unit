@@ -109,8 +109,8 @@ END //
 DROP PROCEDURE IF EXISTS assert_equals //
 
 CREATE PROCEDURE assert_equals (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_message     TEXT
 )
 	COMMENT 'Assert that two values are equal'
@@ -143,7 +143,7 @@ END //
 DROP PROCEDURE IF EXISTS assert_false //
 
 CREATE PROCEDURE assert_false (
-	IN p_expression BOOLEAN,
+	IN p_expression LONGBLOB,
 	IN p_message    TEXT
 )
 	COMMENT 'Assert that a value equates to FALSE'
@@ -176,8 +176,8 @@ END //
 DROP PROCEDURE IF EXISTS assert_like_escape //
 
 CREATE PROCEDURE assert_like_escape (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_escape      CHAR(1),
 	IN p_message     TEXT
 )
@@ -211,8 +211,8 @@ END //
 DROP PROCEDURE IF EXISTS assert_like //
 
 CREATE PROCEDURE assert_like (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_message     TEXT
 )
 	COMMENT 'Assert that one expression is like another'
@@ -301,8 +301,8 @@ END //
 DROP PROCEDURE IF EXISTS assert_not_equals //
 
 CREATE PROCEDURE assert_not_equals (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_message     TEXT
 )
 	COMMENT 'Assert that two values are not equal'
@@ -335,8 +335,8 @@ END //
 DROP PROCEDURE IF EXISTS assert_not_like_escape //
 
 CREATE PROCEDURE assert_not_like_escape (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_escape      CHAR(1),
 	IN p_message     TEXT
 )
@@ -370,8 +370,8 @@ END //
 DROP PROCEDURE IF EXISTS assert_not_like //
 
 CREATE PROCEDURE assert_not_like (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_message     TEXT
 )
 	COMMENT 'Assert that one expression is not like another'
@@ -404,7 +404,7 @@ END //
 DROP PROCEDURE IF EXISTS assert_not_null //
 
 CREATE PROCEDURE assert_not_null (
-	IN p_expression BOOLEAN,
+	IN p_expression LONGBLOB,
 	IN p_message    TEXT
 )
 	COMMENT 'Assert that a value does not equate to NULL'
@@ -437,8 +437,8 @@ END //
 DROP PROCEDURE IF EXISTS assert_not_regexp //
 
 CREATE PROCEDURE assert_not_regexp (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_message     TEXT
 )
 	COMMENT 'Assert that an expression does not match a case-insensitive regular expression'
@@ -471,7 +471,7 @@ END //
 DROP PROCEDURE IF EXISTS assert_null //
 
 CREATE PROCEDURE assert_null (
-	IN p_expression BOOLEAN,
+	IN p_expression LONGBLOB,
 	IN p_message    TEXT
 )
 	COMMENT 'Assert that a value equates to NULL'
@@ -504,8 +504,8 @@ END //
 DROP PROCEDURE IF EXISTS assert_regexp //
 
 CREATE PROCEDURE assert_regexp (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_message     TEXT
 )
 	COMMENT 'Assert that an expression matches a case-insensitive regular expression'

@@ -18,8 +18,8 @@
 DROP PROCEDURE IF EXISTS assert_regexp //
 
 CREATE PROCEDURE assert_regexp (
-	IN p_expression1 BLOB,
-	IN p_expression2 BLOB,
+	IN p_expression1 LONGBLOB,
+	IN p_expression2 LONGBLOB,
 	IN p_message     TEXT
 )
 	COMMENT 'Assert that an expression matches a case-insensitive regular expression'

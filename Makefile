@@ -23,4 +23,4 @@ clean:
 
 test.log: fab-unit.sql
 	mysql --execute "SOURCE fab-unit.sql"
-	script -q -c "mysql --execute \"CALL fab_unit.run('fab_unit', 'test_%')\" " | tee $@
+	script -q -c "mysql --execute \"CALL fab_unit.run('fab_unit', 'test_%')\" " $@

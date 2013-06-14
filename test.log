@@ -1,1 +1,29 @@
-ERROR 1366 (HY000) at line 1: Incorrect integer value: 'XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' for column 'p_expression' at row 1
+Script started on Fri 14 Jun 2013 21:02:04 BST
++----------------------------------+--------+----------+
+| script                           | result | details  |
++----------------------------------+--------+----------+
+| Test: assert()                   | pass   | 7 tests  |
+| Test: assert_column_comments()   | pass   | 3 tests  |
+| Test: assert_equals()            | pass   | 45 tests |
+| Test: assert_false()             | pass   | 7 tests  |
+| Test: assert_like()              | pass   | 15 tests |
+| Test: assert_like_escape()       | pass   | 21 tests |
+| Test: assert_not_equals()        | pass   | 45 tests |
+| Test: assert_not_like()          | pass   | 15 tests |
+| Test: assert_not_like_escape()   | pass   | 13 tests |
+| Test: assert_not_null()          | pass   | 8 tests  |
+| Test: assert_not_regexp()        | pass   | 22 tests |
+| Test: assert_no_reserved_words() | pass   | 2 tests  |
+| Test: assert_null()              | pass   | 8 tests  |
+| Test: assert_regexp()            | pass   | 22 tests |
+| Test: assert_routine_comments()  | pass   | 1 test   |
+| Test: assert_table_comments()    | pass   | 3 tests  |
+| Test: assert_true()              | pass   | 7 tests  |
+| Test: coverage of unit tests     | pass   | 1 test   |
+| Test: set-up and tear-down       | pass   | 10 tests |
++----------------------------------+--------+----------+
++--------+-------+---------+
+| result | tests | seconds |
++--------+-------+---------+
+| pass   |   255 |       4 |
++--------+-------+---------+

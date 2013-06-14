@@ -18,7 +18,7 @@
 DROP PROCEDURE IF EXISTS assert_false //
 
 CREATE PROCEDURE assert_false (
-	IN p_expression BOOLEAN,
+	IN p_expression LONGBLOB,
 	IN p_message    TEXT
 )
 	COMMENT 'Assert that a value equates to FALSE'
